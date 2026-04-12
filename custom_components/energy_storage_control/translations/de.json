@@ -1,0 +1,393 @@
+{
+  "title": "Energiespeicher-Steuerung",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Voraussetzungen",
+        "description": "Richte zuerst die erforderlichen Integrationen ein. Sind Tibber und die Zendure Home Assistant Integration bereits eingerichtet, wird diese Seite automatisch übersprungen.",
+        "data": {}
+      },
+      "soc_sources": {
+        "title": "Quellen für den Ladezustand",
+        "description": "Wähle die Entitäten für minimalen, maximalen und aktuellen State of Charge (SoC).",
+        "data": {
+          "soc_min_sensor": "Entität für minimalen State of Charge (SoC)",
+          "soc_max_sensor": "Entität für maximalen State of Charge (SoC)",
+          "soc_current_sensor": "Entität für aktuellen State of Charge (SoC)"
+        }
+      },
+      "power_limit_sources": {
+        "title": "Technische Leistungsgrenzen",
+        "description": "Wähle die Entitäten für das technische Ausgangs- und Eingangslimit.",
+        "data": {
+          "output_limit_sensor": "Entität für Ausgangslimit",
+          "input_limit_sensor": "Entität für Eingangslimit"
+        }
+      },
+      "price_settings": {
+        "title": "Preislogik und Grundlast",
+        "description": "Lege die Günstigkeitsschwelle und die feste Leistung fest, die in jedem Fall aus dem Netz bezogen wird.",
+        "data": {
+          "default_threshold_percent": "Günstigkeitsschwelle",
+          "base_grid_power_w": "Fester Netzbezug"
+        }
+      },
+      "grid_sources": {
+        "title": "Netzleistung erfassen",
+        "description": "Wähle mindestens einen Sensor für Netzbezug und optional Sensoren für Netzeinspeisung. Bei mehreren Quellen wird jeweils die zuletzt aktualisierte Quelle verwendet.",
+        "data": {
+          "grid_import_sensor": "Sensor(en) für Netzbezug",
+          "grid_export_sensor": "Sensor(en) für Netzeinspeisung"
+        }
+      },
+      "battery_settings": {
+        "title": "Batterieeinstellungen",
+        "description": "Lege die nutzbare Batteriekapazität und die SoC-Hysterese fest.",
+        "data": {
+          "battery_capacity_kwh": "Batteriekapazität",
+          "soc_hysteresis_percent": "SoC-Hysterese"
+        }
+      },
+      "user_limits": {
+        "title": "Benutzerlimits",
+        "description": "Lege zusätzliche Benutzerlimits für Ausgang und Eingang fest. Die maximal zulässigen Werte richten sich nach den gewählten technischen Leistungsgrenzen.",
+        "data": {
+          "user_output_limit_w": "Benutzerlimit Ausgang",
+          "user_input_limit_w": "Benutzerlimit Eingang"
+        }
+      },
+      "charge_feedback_source": {
+        "title": "Rückmeldung Batterieladung",
+        "description": "Wähle die Entität, die die tatsächliche Ladeleistung in den Akku meldet. Dieser Wert wird verwendet, um den Ladewirkungsgrad aus echten Ladephasen zu lernen.",
+        "data": {
+          "actual_charge_power_sensor": "Entität für tatsächliche Batterieladeleistung"
+        }
+      },
+      "command_target": {
+        "title": "Zielentität aktualisieren",
+        "description": "Wähle optional eine beschreibbare Zahl-/Helfer-Entität aus, die mit dem vorzeichenbehafteten Wert von Lade-/Entladeleistung aktualisiert werden soll. Sensoren sind in Home Assistant schreibgeschützt, Zahlen können über set_value aktualisiert werden.",
+        "data": {
+          "command_target_entity": "Entität für Aktualisierung mit Lade-/Entladeleistung"
+        }
+      }
+    },
+    "error": {
+      "missing_required_integrations": "Die erforderlichen Integrationen sind noch nicht vollständig eingerichtet.",
+      "no_suitable_power_sensors": "Es wurden keine geeigneten Leistungssensoren gefunden.",
+      "no_suitable_soc_sensors": "Es wurden keine geeigneten Entitäten für den Ladezustand gefunden.",
+      "no_suitable_power_limit_entities": "Es wurden keine geeigneten Entitäten für technische Leistungsgrenzen gefunden.",
+      "invalid_soc_sensor_selected": "Mindestens eine ausgewählte Entität für den Ladezustand ist ungeeignet.",
+      "same_soc_sensor_selected": "Für minimalen, maximalen und aktuellen Ladezustand müssen unterschiedliche Entitäten gewählt werden.",
+      "same_sensor_selected": "Dieselbe Entität darf nicht gleichzeitig für Netzbezug und Netzeinspeisung verwendet werden.",
+      "same_power_limit_entity_selected": "Dieselbe Entität darf nicht gleichzeitig für das technische Ein- und Ausgangslimit verwendet werden.",
+      "invalid_power_limit_entity_selected": "Mindestens eine ausgewählte Entität für die technischen Leistungsgrenzen ist ungültig.",
+      "grid_import_required": "Es muss mindestens ein Sensor für Netzbezug ausgewählt werden.",
+      "no_suitable_charge_feedback_entities": "Es wurden keine geeigneten Entitäten für die tatsächliche Batterieladeleistung gefunden.",
+      "invalid_charge_feedback_entity_selected": "Die ausgewählte Entität für die tatsächliche Batterieladeleistung ist ungültig.",
+      "invalid_command_target_entity_selected": "Die ausgewählte Zielentität kann keine vorzeichenbehafteten Leistungswerte annehmen."
+    },
+    "abort": {
+      "already_configured": "Diese Integration kann nur einmal eingerichtet werden."
+    }
+  },
+  "options": {
+    "step": {
+      "soc_sources": {
+        "title": "Quellen für den Ladezustand",
+        "description": "Passe die Entitäten für minimalen, maximalen und aktuellen State of Charge (SoC) an.",
+        "data": {
+          "soc_min_sensor": "Entität für minimalen State of Charge (SoC)",
+          "soc_max_sensor": "Entität für maximalen State of Charge (SoC)",
+          "soc_current_sensor": "Entität für aktuellen State of Charge (SoC)"
+        }
+      },
+      "power_limit_sources": {
+        "title": "Technische Leistungsgrenzen",
+        "description": "Passe die Entitäten für das technische Ausgangs- und Eingangslimit an.",
+        "data": {
+          "output_limit_sensor": "Entität für Ausgangslimit",
+          "input_limit_sensor": "Entität für Eingangslimit"
+        }
+      },
+      "price_settings": {
+        "title": "Preislogik und Grundlast",
+        "description": "Passe Günstigkeitsschwelle und festen Netzbezug an.",
+        "data": {
+          "default_threshold_percent": "Günstigkeitsschwelle",
+          "base_grid_power_w": "Fester Netzbezug"
+        }
+      },
+      "grid_sources": {
+        "title": "Netzleistung erfassen",
+        "description": "Wähle mindestens einen Sensor für Netzbezug und optional Sensoren für Netzeinspeisung. Bei mehreren Quellen wird jeweils die zuletzt aktualisierte Quelle verwendet.",
+        "data": {
+          "grid_import_sensor": "Sensor(en) für Netzbezug",
+          "grid_export_sensor": "Sensor(en) für Netzeinspeisung"
+        }
+      },
+      "battery_settings": {
+        "title": "Batterieeinstellungen",
+        "description": "Passe Batteriekapazität und SoC-Hysterese an.",
+        "data": {
+          "battery_capacity_kwh": "Batteriekapazität",
+          "soc_hysteresis_percent": "SoC-Hysterese"
+        }
+      },
+      "user_limits": {
+        "title": "Benutzerlimits",
+        "description": "Passe die zusätzlichen Benutzerlimits für Ausgang und Eingang an.",
+        "data": {
+          "user_output_limit_w": "Benutzerlimit Ausgang",
+          "user_input_limit_w": "Benutzerlimit Eingang"
+        }
+      },
+      "charge_feedback_source": {
+        "title": "Rückmeldung Batterieladung",
+        "description": "Wähle die Entität, die die tatsächliche Ladeleistung in den Akku meldet. Dieser Wert wird verwendet, um den Ladewirkungsgrad aus echten Ladephasen zu lernen.",
+        "data": {
+          "actual_charge_power_sensor": "Entität für tatsächliche Batterieladeleistung"
+        }
+      },
+      "command_target": {
+        "title": "Zielentität aktualisieren",
+        "description": "Wähle optional eine beschreibbare Zahl-/Helfer-Entität aus, die mit dem vorzeichenbehafteten Wert von Lade-/Entladeleistung aktualisiert werden soll. Sensoren sind in Home Assistant schreibgeschützt, Zahlen können über set_value aktualisiert werden.",
+        "data": {
+          "command_target_entity": "Entität für Aktualisierung mit Lade-/Entladeleistung"
+        }
+      }
+    },
+    "error": {
+      "missing_required_integrations": "Die erforderlichen Integrationen sind noch nicht vollständig eingerichtet.",
+      "no_suitable_power_sensors": "Es wurden keine geeigneten Leistungssensoren gefunden.",
+      "no_suitable_soc_sensors": "Es wurden keine geeigneten Entitäten für den Ladezustand gefunden.",
+      "no_suitable_power_limit_entities": "Es wurden keine geeigneten Entitäten für technische Leistungsgrenzen gefunden.",
+      "invalid_soc_sensor_selected": "Mindestens eine ausgewählte Entität für den Ladezustand ist ungeeignet.",
+      "same_soc_sensor_selected": "Für minimalen, maximalen und aktuellen Ladezustand müssen unterschiedliche Entitäten gewählt werden.",
+      "same_sensor_selected": "Dieselbe Entität darf nicht gleichzeitig für Netzbezug und Netzeinspeisung verwendet werden.",
+      "same_power_limit_entity_selected": "Dieselbe Entität darf nicht gleichzeitig für das technische Ein- und Ausgangslimit verwendet werden.",
+      "invalid_power_limit_entity_selected": "Mindestens eine ausgewählte Entität für die technischen Leistungsgrenzen ist ungültig.",
+      "grid_import_required": "Es muss mindestens ein Sensor für Netzbezug ausgewählt werden.",
+      "no_suitable_charge_feedback_entities": "Es wurden keine geeigneten Entitäten für die tatsächliche Batterieladeleistung gefunden.",
+      "invalid_charge_feedback_entity_selected": "Die ausgewählte Entität für die tatsächliche Batterieladeleistung ist ungültig.",
+      "invalid_command_target_entity_selected": "Die ausgewählte Zielentität kann keine vorzeichenbehafteten Leistungswerte annehmen."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_price": {
+        "name": "Aktueller Strompreis",
+        "state_attributes": {
+          "min_today_price": {
+            "name": "Min. Heute Preis"
+          },
+          "avg_today_price": {
+            "name": "Avg. Heute Preis"
+          },
+          "max_today_price": {
+            "name": "Max. Heute Preis"
+          },
+          "min_tomorrow_price": {
+            "name": "Min. Morgen Preis"
+          },
+          "avg_tomorrow_price": {
+            "name": "Avg. Morgen Preis"
+          },
+          "max_tomorrow_price": {
+            "name": "Max. Morgen Preis"
+          },
+          "min_overall_price": {
+            "name": "Min. Insgesamt Preis"
+          },
+          "avg_overall_price": {
+            "name": "Avg. Insgesamt Preis"
+          },
+          "max_overall_price": {
+            "name": "Max. Insgesamt Preis"
+          },
+          "min_today_time": {
+            "name": "Zeitpunkt Min. Heute Preis"
+          },
+          "avg_today_time": {
+            "name": "Zeitpunkt Avg. Heute Preis"
+          },
+          "max_today_time": {
+            "name": "Zeitpunkt Max. Heute Preis"
+          },
+          "min_tomorrow_time": {
+            "name": "Zeitpunkt Min. Morgen Preis"
+          },
+          "avg_tomorrow_time": {
+            "name": "Zeitpunkt Avg. Morgen Preis"
+          },
+          "max_tomorrow_time": {
+            "name": "Zeitpunkt Max. Morgen Preis"
+          },
+          "min_overall_time": {
+            "name": "Zeitpunkt Min. Insgesamt Preis"
+          },
+          "avg_overall_time": {
+            "name": "Zeitpunkt Avg. Insgesamt Preis"
+          },
+          "max_overall_time": {
+            "name": "Zeitpunkt Max. Insgesamt Preis"
+          },
+          "data": {
+            "name": "Rohdaten"
+          }
+        }
+      },
+      "favorable_phase": {
+        "name": "Günstigphase",
+        "state_attributes": {
+          "favorable_until": {
+            "name": "Günstig bis"
+          },
+          "min_favorable_phase_price": {
+            "name": "Min. Günstigphase Preis"
+          },
+          "avg_favorable_phase_price": {
+            "name": "Avg. Günstigphase Preis"
+          },
+          "max_favorable_phase_price": {
+            "name": "Max. Günstigphase Preis"
+          },
+          "min_favorable_phase_time": {
+            "name": "Zeitpunkt Min. Günstigphase Preis"
+          },
+          "avg_favorable_phase_time": {
+            "name": "Zeitpunkt Avg. Günstigphase Preis"
+          },
+          "max_favorable_phase_time": {
+            "name": "Zeitpunkt Max. Günstigphase Preis"
+          },
+          "data": {
+            "name": "Rohdaten"
+          },
+          "favorable_from": {
+            "name": "Günstig ab"
+          },
+          "threshold_min_price": {
+            "name": "Schwelle Min. Preis"
+          },
+          "threshold_max_price": {
+            "name": "Schwelle Max. Preis"
+          }
+        }
+      },
+      "grid_power_balance": {
+        "name": "Netzleistungsbilanz",
+        "state_attributes": {
+          "grid_import": {
+            "name": "Netzbezug"
+          },
+          "grid_export": {
+            "name": "Einspeisung"
+          },
+          "min_today_value": {
+            "name": "Min. Wert heute"
+          },
+          "min_today_time": {
+            "name": "Zeitpunkt Min. Wert heute"
+          },
+          "max_today_value": {
+            "name": "Max. Wert heute"
+          },
+          "max_today_time": {
+            "name": "Zeitpunkt Max. Wert heute"
+          },
+          "avg_today_value": {
+            "name": "Durchschnittswert heute"
+          }
+        }
+      },
+      "state_of_charge": {
+        "name": "Ladezustand",
+        "state_attributes": {
+          "minimum_soc": {
+            "name": "Minimaler State of Charge (SoC)"
+          },
+          "maximum_soc": {
+            "name": "Maximaler State of Charge (SoC)"
+          }
+        }
+      },
+      "charge_discharge_power": {
+        "name": "Lade-/Entladeleistung",
+        "state_attributes": {
+          "discharge_power": {
+            "name": "Entladeleistung"
+          },
+          "charge_efficiency": {
+            "name": "Wirkungsgrad"
+          },
+          "charge_efficiency_current": {
+            "name": "Aktueller Wirkungsgrad"
+          },
+          "charge_efficiency_samples": {
+            "name": "Wirkungsgrad-Messungen"
+          },
+          "charge_power": {
+            "name": "Ladeleistung"
+          },
+          "command_target_entity": {
+            "name": "Zielentität"
+          },
+          "command_target_update_enabled": {
+            "name": "Aktualisierung der Zielentität aktiviert"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "favorable_now": {
+        "name": "Aktuell günstig"
+      }
+    },
+    "number": {
+      "favorable_threshold": {
+        "name": "Günstigkeitsschwelle"
+      },
+      "battery_capacity": {
+        "name": "Batteriekapazität",
+        "state_attributes": {
+          "current_energy": {
+            "name": "Aktueller Energieinhalt"
+          },
+          "energy_at_minimum_soc": {
+            "name": "Energieinhalt bei minimalem State of Charge (SoC)"
+          },
+          "energy_at_maximum_soc": {
+            "name": "Energieinhalt bei maximalem State of Charge (SoC)"
+          }
+        }
+      },
+      "base_grid_power": {
+        "name": "Fester Netzbezug"
+      },
+      "output_power_limit": {
+        "name": "Benutzerlimit Ausgang",
+        "state_attributes": {
+          "output_limit_source_value": {
+            "name": "Wert Ausgangslimit"
+          }
+        }
+      },
+      "input_power_limit": {
+        "name": "Benutzerlimit Eingang",
+        "state_attributes": {
+          "input_limit_source_value": {
+            "name": "Wert Eingangslimit"
+          }
+        }
+      },
+      "soc_hysteresis": {
+        "name": "SoC-Hysterese"
+      }
+    },
+    "switch": {
+      "command_target_update": {
+        "name": "Aktualisieren"
+      }
+    }
+  }
+}

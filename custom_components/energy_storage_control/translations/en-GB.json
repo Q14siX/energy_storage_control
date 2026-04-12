@@ -1,0 +1,393 @@
+{
+  "title": "Energy Storage Control",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Requirements",
+        "description": "Set up the required integrations first. If Tibber and the Zendure Home Assistant Integration are already configured, this page is skipped automatically.",
+        "data": {}
+      },
+      "soc_sources": {
+        "title": "State of charge sources",
+        "description": "Select the entities for minimum, maximum, and current State of Charge (SoC).",
+        "data": {
+          "soc_min_sensor": "Entity for minimum State of Charge (SoC)",
+          "soc_max_sensor": "Entity for maximum State of Charge (SoC)",
+          "soc_current_sensor": "Entity for current State of Charge (SoC)"
+        }
+      },
+      "power_limit_sources": {
+        "title": "Technical power limits",
+        "description": "Select the entities for the technical output and input limits.",
+        "data": {
+          "output_limit_sensor": "Entity for output limit",
+          "input_limit_sensor": "Entity for input limit"
+        }
+      },
+      "price_settings": {
+        "title": "Price logic and base load",
+        "description": "Set the favorable price threshold and the fixed power that should always be drawn from the grid.",
+        "data": {
+          "default_threshold_percent": "Favorable threshold",
+          "base_grid_power_w": "Fixed grid import"
+        }
+      },
+      "grid_sources": {
+        "title": "Grid power sources",
+        "description": "Select at least one sensor for grid import and optionally sensors for grid export. If multiple sources are configured, the most recently updated source is used.",
+        "data": {
+          "grid_import_sensor": "Sensor(s) for grid import",
+          "grid_export_sensor": "Sensor(s) for grid export"
+        }
+      },
+      "battery_settings": {
+        "title": "Battery settings",
+        "description": "Set the usable battery capacity and the SoC hysteresis.",
+        "data": {
+          "battery_capacity_kwh": "Battery capacity",
+          "soc_hysteresis_percent": "SoC hysteresis"
+        }
+      },
+      "user_limits": {
+        "title": "User limits",
+        "description": "Define additional user limits for output and input. The maximum allowed values follow the selected technical power limits.",
+        "data": {
+          "user_output_limit_w": "User output limit",
+          "user_input_limit_w": "User input limit"
+        }
+      },
+      "charge_feedback_source": {
+        "title": "Battery charge feedback",
+        "description": "Select the entity that reports the actual charging power flowing into the battery. This value is used to learn the charging efficiency from real charging phases.",
+        "data": {
+          "actual_charge_power_sensor": "Entity for actual battery charge power"
+        }
+      },
+      "command_target": {
+        "title": "Command target update",
+        "description": "Optionally select a writable number/helper entity that should receive the signed value of Charge/discharge power. Sensor entities are read-only in Home Assistant, while number entities can be updated via set_value actions.",
+        "data": {
+          "command_target_entity": "Entity to update with Charge/discharge power"
+        }
+      }
+    },
+    "error": {
+      "missing_required_integrations": "The required integrations are not fully configured yet.",
+      "no_suitable_power_sensors": "No suitable power sensors were found.",
+      "no_suitable_soc_sensors": "No suitable state-of-charge entities were found.",
+      "no_suitable_power_limit_entities": "No suitable entities for technical power limits were found.",
+      "invalid_soc_sensor_selected": "At least one selected state-of-charge entity is not suitable.",
+      "same_soc_sensor_selected": "The minimum, maximum, and current state of charge must use different entities.",
+      "same_sensor_selected": "The same entity cannot be used for both grid import and grid export.",
+      "same_power_limit_entity_selected": "The same entity cannot be used for both the technical input and output limit.",
+      "invalid_power_limit_entity_selected": "At least one selected technical power limit entity is invalid.",
+      "grid_import_required": "At least one grid import sensor must be selected.",
+      "no_suitable_charge_feedback_entities": "No suitable entities for actual battery charge power were found.",
+      "invalid_charge_feedback_entity_selected": "The selected entity for actual battery charge power is invalid.",
+      "invalid_command_target_entity_selected": "The selected target entity cannot accept signed power values."
+    },
+    "abort": {
+      "already_configured": "This integration can only be configured once."
+    }
+  },
+  "options": {
+    "step": {
+      "soc_sources": {
+        "title": "State of charge sources",
+        "description": "Adjust the entities for minimum, maximum, and current State of Charge (SoC).",
+        "data": {
+          "soc_min_sensor": "Entity for minimum State of Charge (SoC)",
+          "soc_max_sensor": "Entity for maximum State of Charge (SoC)",
+          "soc_current_sensor": "Entity for current State of Charge (SoC)"
+        }
+      },
+      "power_limit_sources": {
+        "title": "Technical power limits",
+        "description": "Adjust the entities for the technical output and input limits.",
+        "data": {
+          "output_limit_sensor": "Entity for output limit",
+          "input_limit_sensor": "Entity for input limit"
+        }
+      },
+      "price_settings": {
+        "title": "Price logic and base load",
+        "description": "Adjust the favorable threshold and fixed grid import.",
+        "data": {
+          "default_threshold_percent": "Favorable threshold",
+          "base_grid_power_w": "Fixed grid import"
+        }
+      },
+      "grid_sources": {
+        "title": "Grid power sources",
+        "description": "Select at least one sensor for grid import and optionally sensors for grid export. If multiple sources are configured, the most recently updated source is used.",
+        "data": {
+          "grid_import_sensor": "Sensor(s) for grid import",
+          "grid_export_sensor": "Sensor(s) for grid export"
+        }
+      },
+      "battery_settings": {
+        "title": "Battery settings",
+        "description": "Adjust the battery capacity and SoC hysteresis.",
+        "data": {
+          "battery_capacity_kwh": "Battery capacity",
+          "soc_hysteresis_percent": "SoC hysteresis"
+        }
+      },
+      "user_limits": {
+        "title": "User limits",
+        "description": "Adjust the additional user limits for output and input.",
+        "data": {
+          "user_output_limit_w": "User output limit",
+          "user_input_limit_w": "User input limit"
+        }
+      },
+      "charge_feedback_source": {
+        "title": "Battery charge feedback",
+        "description": "Select the entity that reports the actual charging power flowing into the battery. This value is used to learn the charging efficiency from real charging phases.",
+        "data": {
+          "actual_charge_power_sensor": "Entity for actual battery charge power"
+        }
+      },
+      "command_target": {
+        "title": "Command target update",
+        "description": "Optionally select a writable number/helper entity that should receive the signed value of Charge/discharge power. Sensor entities are read-only in Home Assistant, while number entities can be updated via set_value actions.",
+        "data": {
+          "command_target_entity": "Entity to update with Charge/discharge power"
+        }
+      }
+    },
+    "error": {
+      "missing_required_integrations": "The required integrations are not fully configured yet.",
+      "no_suitable_power_sensors": "No suitable power sensors were found.",
+      "no_suitable_soc_sensors": "No suitable state-of-charge entities were found.",
+      "no_suitable_power_limit_entities": "No suitable entities for technical power limits were found.",
+      "invalid_soc_sensor_selected": "At least one selected state-of-charge entity is not suitable.",
+      "same_soc_sensor_selected": "The minimum, maximum, and current state of charge must use different entities.",
+      "same_sensor_selected": "The same entity cannot be used for both grid import and grid export.",
+      "same_power_limit_entity_selected": "The same entity cannot be used for both the technical input and output limit.",
+      "invalid_power_limit_entity_selected": "At least one selected technical power limit entity is invalid.",
+      "grid_import_required": "At least one grid import sensor must be selected.",
+      "no_suitable_charge_feedback_entities": "No suitable entities for actual battery charge power were found.",
+      "invalid_charge_feedback_entity_selected": "The selected entity for actual battery charge power is invalid.",
+      "invalid_command_target_entity_selected": "The selected target entity cannot accept signed power values."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_price": {
+        "name": "Current electricity price",
+        "state_attributes": {
+          "min_today_price": {
+            "name": "Min. today price"
+          },
+          "avg_today_price": {
+            "name": "Avg. today price"
+          },
+          "max_today_price": {
+            "name": "Max. today price"
+          },
+          "min_tomorrow_price": {
+            "name": "Min. tomorrow price"
+          },
+          "avg_tomorrow_price": {
+            "name": "Avg. tomorrow price"
+          },
+          "max_tomorrow_price": {
+            "name": "Max. tomorrow price"
+          },
+          "min_overall_price": {
+            "name": "Min. overall price"
+          },
+          "avg_overall_price": {
+            "name": "Avg. overall price"
+          },
+          "max_overall_price": {
+            "name": "Max. overall price"
+          },
+          "min_today_time": {
+            "name": "Time of min. today price"
+          },
+          "avg_today_time": {
+            "name": "Time of avg. today price"
+          },
+          "max_today_time": {
+            "name": "Time of max. today price"
+          },
+          "min_tomorrow_time": {
+            "name": "Time of min. tomorrow price"
+          },
+          "avg_tomorrow_time": {
+            "name": "Time of avg. tomorrow price"
+          },
+          "max_tomorrow_time": {
+            "name": "Time of max. tomorrow price"
+          },
+          "min_overall_time": {
+            "name": "Time of min. overall price"
+          },
+          "avg_overall_time": {
+            "name": "Time of avg. overall price"
+          },
+          "max_overall_time": {
+            "name": "Time of max. overall price"
+          },
+          "data": {
+            "name": "Raw data"
+          }
+        }
+      },
+      "favorable_phase": {
+        "name": "Favorable phase",
+        "state_attributes": {
+          "favorable_until": {
+            "name": "Favourable until"
+          },
+          "min_favorable_phase_price": {
+            "name": "Min. favourable phase price"
+          },
+          "avg_favorable_phase_price": {
+            "name": "Avg. favourable phase price"
+          },
+          "max_favorable_phase_price": {
+            "name": "Max. favourable phase price"
+          },
+          "min_favorable_phase_time": {
+            "name": "Time of min. favourable phase price"
+          },
+          "avg_favorable_phase_time": {
+            "name": "Time of avg. favourable phase price"
+          },
+          "max_favorable_phase_time": {
+            "name": "Time of max. favourable phase price"
+          },
+          "data": {
+            "name": "Raw data"
+          },
+          "favorable_from": {
+            "name": "Favourable from"
+          },
+          "threshold_min_price": {
+            "name": "Threshold min. price"
+          },
+          "threshold_max_price": {
+            "name": "Threshold max. price"
+          }
+        }
+      },
+      "grid_power_balance": {
+        "name": "Grid power balance",
+        "state_attributes": {
+          "grid_import": {
+            "name": "Grid import"
+          },
+          "grid_export": {
+            "name": "Grid export"
+          },
+          "min_today_value": {
+            "name": "Min. value today"
+          },
+          "min_today_time": {
+            "name": "Time of min. value today"
+          },
+          "max_today_value": {
+            "name": "Max. value today"
+          },
+          "max_today_time": {
+            "name": "Time of max. value today"
+          },
+          "avg_today_value": {
+            "name": "Avg. value today"
+          }
+        }
+      },
+      "state_of_charge": {
+        "name": "State of charge",
+        "state_attributes": {
+          "minimum_soc": {
+            "name": "Minimum state of charge"
+          },
+          "maximum_soc": {
+            "name": "Maximum state of charge"
+          }
+        }
+      },
+      "charge_discharge_power": {
+        "name": "Charge/discharge power",
+        "state_attributes": {
+          "discharge_power": {
+            "name": "Discharge power"
+          },
+          "charge_efficiency": {
+            "name": "Efficiency"
+          },
+          "charge_efficiency_current": {
+            "name": "Current efficiency"
+          },
+          "charge_efficiency_samples": {
+            "name": "Efficiency samples"
+          },
+          "charge_power": {
+            "name": "Charge power"
+          },
+          "command_target_entity": {
+            "name": "Command target entity"
+          },
+          "command_target_update_enabled": {
+            "name": "Command target updates enabled"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "favorable_now": {
+        "name": "Favorable now"
+      }
+    },
+    "number": {
+      "favorable_threshold": {
+        "name": "Favorable threshold"
+      },
+      "battery_capacity": {
+        "name": "Battery capacity",
+        "state_attributes": {
+          "current_energy": {
+            "name": "Current energy"
+          },
+          "energy_at_minimum_soc": {
+            "name": "Energy at minimum state of charge"
+          },
+          "energy_at_maximum_soc": {
+            "name": "Energy at maximum state of charge"
+          }
+        }
+      },
+      "base_grid_power": {
+        "name": "Fixed grid import"
+      },
+      "output_power_limit": {
+        "name": "User output limit",
+        "state_attributes": {
+          "output_limit_source_value": {
+            "name": "Selected output limit value"
+          }
+        }
+      },
+      "input_power_limit": {
+        "name": "User input limit",
+        "state_attributes": {
+          "input_limit_source_value": {
+            "name": "Selected input limit value"
+          }
+        }
+      },
+      "soc_hysteresis": {
+        "name": "SoC hysteresis"
+      }
+    },
+    "switch": {
+      "command_target_update": {
+        "name": "Update"
+      }
+    }
+  }
+}

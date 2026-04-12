@@ -1,0 +1,17 @@
+{
+  "domain": "energy_storage_control",
+  "name": "Energy Storage Control",
+  "after_dependencies": [
+    "tibber",
+    "zendure_ha"
+  ],
+  "codeowners": [
+    "@Q14siX"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/Q14siX/energy_storage_control",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/Q14siX/energy_storage_control/issues",
+  "version": "20260412.2215"
+}

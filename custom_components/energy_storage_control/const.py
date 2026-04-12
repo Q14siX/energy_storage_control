@@ -1,0 +1,100 @@
+"""Constants for the Energy Storage Control integration."""
+
+from __future__ import annotations
+
+DOMAIN = "energy_storage_control"
+NAME = "Energy Storage Control"
+VERSION = "1.0.9"
+
+PLATFORMS = ["number", "sensor", "binary_sensor", "switch"]
+
+CONF_DEFAULT_THRESHOLD_PERCENT = "default_threshold_percent"
+CONF_THRESHOLDS = "thresholds"
+CONF_GRID_IMPORT_SENSOR = "grid_import_sensor"
+CONF_GRID_EXPORT_SENSOR = "grid_export_sensor"
+CONF_SOC_MIN_SENSOR = "soc_min_sensor"
+CONF_SOC_MAX_SENSOR = "soc_max_sensor"
+CONF_SOC_CURRENT_SENSOR = "soc_current_sensor"
+CONF_ACTUAL_CHARGE_POWER_SENSOR = "actual_charge_power_sensor"
+CONF_COMMAND_TARGET_ENTITY = "command_target_entity"
+CONF_BATTERY_CAPACITY_KWH = "battery_capacity_kwh"
+CONF_BASE_GRID_POWER_W = "base_grid_power_w"
+CONF_OUTPUT_LIMIT_SENSOR = "output_limit_sensor"
+CONF_INPUT_LIMIT_SENSOR = "input_limit_sensor"
+CONF_USER_OUTPUT_LIMIT_W = "user_output_limit_w"
+CONF_USER_INPUT_LIMIT_W = "user_input_limit_w"
+CONF_SOC_HYSTERESIS_PERCENT = "soc_hysteresis_percent"
+
+DEFAULT_THRESHOLD_PERCENT = 20.0
+MIN_THRESHOLD_PERCENT = 0.0
+MAX_THRESHOLD_PERCENT = 100.0
+THRESHOLD_STEP = 0.01
+
+DEFAULT_BATTERY_CAPACITY_KWH = 2.44
+MIN_BATTERY_CAPACITY_KWH = 0.01
+MAX_BATTERY_CAPACITY_KWH = 100.0
+BATTERY_CAPACITY_STEP = 0.01
+
+DEFAULT_BASE_GRID_POWER_W = 0.0
+MIN_BASE_GRID_POWER_W = 0.0
+MAX_BASE_GRID_POWER_W = 50000.0
+BASE_GRID_POWER_STEP = 1.0
+
+DEFAULT_USER_OUTPUT_LIMIT_W = 0.0
+DEFAULT_USER_INPUT_LIMIT_W = 0.0
+MIN_USER_POWER_LIMIT_W = 0.0
+USER_POWER_LIMIT_STEP = 1.0
+
+DEFAULT_SOC_HYSTERESIS_PERCENT = 2.0
+MIN_SOC_HYSTERESIS_PERCENT = 0.0
+MAX_SOC_HYSTERESIS_PERCENT = 100.0
+SOC_HYSTERESIS_STEP = 0.01
+
+DEFAULT_CHARGE_EFFICIENCY_PERCENT = 90.0
+MIN_VALID_CHARGE_EFFICIENCY_PERCENT = 70.0
+MAX_VALID_CHARGE_EFFICIENCY_PERCENT = 100.0
+MIN_CHARGE_EFFICIENCY_REQUESTED_ENERGY_KWH = 0.05
+MIN_CHARGE_EFFICIENCY_STORED_ENERGY_KWH = 0.01
+MIN_CHARGE_EFFICIENCY_DURATION_SECONDS = 300
+
+ATTR_DATA = "data"
+ATTR_FAVORABLE_FROM = "favorable_from"
+ATTR_FAVORABLE_UNTIL = "favorable_until"
+ATTR_THRESHOLD_MIN_PRICE = "threshold_min_price"
+ATTR_THRESHOLD_MAX_PRICE = "threshold_max_price"
+ATTR_MINIMUM_SOC = "minimum_soc"
+ATTR_MAXIMUM_SOC = "maximum_soc"
+ATTR_CURRENT_ENERGY = "current_energy"
+ATTR_ENERGY_AT_MINIMUM_SOC = "energy_at_minimum_soc"
+ATTR_ENERGY_AT_MAXIMUM_SOC = "energy_at_maximum_soc"
+ATTR_GRID_IMPORT = "grid_import"
+ATTR_GRID_EXPORT = "grid_export"
+ATTR_OUTPUT_LIMIT_SOURCE_VALUE = "output_limit_source_value"
+ATTR_INPUT_LIMIT_SOURCE_VALUE = "input_limit_source_value"
+ATTR_DISCHARGE_POWER = "discharge_power"
+ATTR_CHARGE_POWER = "charge_power"
+ATTR_CHARGE_EFFICIENCY = "charge_efficiency"
+ATTR_CHARGE_EFFICIENCY_CURRENT = "charge_efficiency_current"
+ATTR_CHARGE_EFFICIENCY_SAMPLES = "charge_efficiency_samples"
+ATTR_COMMAND_TARGET_ENTITY = "command_target_entity"
+ATTR_COMMAND_TARGET_UPDATE_ENABLED = "command_target_update_enabled"
+
+STORAGE_VERSION = 2
+STORAGE_KEY_PREFIX = f"{DOMAIN}_cache"
+
+ENTITY_KEY_CURRENT_PRICE = "current_price"
+ENTITY_KEY_FAVORABLE_PHASE = "favorable_phase"
+ENTITY_KEY_FAVORABLE_NOW = "favorable_now"
+ENTITY_KEY_FAVORABLE_THRESHOLD = "favorable_threshold"
+ENTITY_KEY_GRID_POWER_BALANCE = "grid_power_balance"
+ENTITY_KEY_STATE_OF_CHARGE = "state_of_charge"
+ENTITY_KEY_BATTERY_CAPACITY = "battery_capacity"
+ENTITY_KEY_BASE_GRID_POWER = "base_grid_power"
+ENTITY_KEY_OUTPUT_POWER_LIMIT = "output_power_limit"
+ENTITY_KEY_INPUT_POWER_LIMIT = "input_power_limit"
+ENTITY_KEY_SOC_HYSTERESIS = "soc_hysteresis"
+ENTITY_KEY_CHARGE_DISCHARGE_POWER = "charge_discharge_power"
+ENTITY_KEY_COMMAND_TARGET_UPDATE = "command_target_update"
+
+MANUFACTURER = "Q14siX"
+MODEL = "Energy Storage Control"
