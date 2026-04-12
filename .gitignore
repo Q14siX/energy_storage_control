@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+__MACOSX/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Editors
+.vscode/
+.idea/
+
+# Build / test
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+htmlcov/
