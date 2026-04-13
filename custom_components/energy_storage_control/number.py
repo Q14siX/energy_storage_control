@@ -98,6 +98,10 @@ class TibberPreisThresholdNumber(TibberPreisEntity, NumberEntity):
     def native_value(self) -> float:
         return self.coordinator.get_threshold_for_home(self._home_key)
 
+    @property
+    def extra_state_attributes(self):
+        return self.coordinator.get_favorable_threshold_attributes(self._home_key)
+
     async def async_set_native_value(self, value: float) -> None:
         await self.coordinator.async_set_threshold_for_home(self._home_key, value)
 

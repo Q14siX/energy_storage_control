@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "energy_storage_control"
 NAME = "Energy Storage Control"
-VERSION = "1.0.9"
+VERSION = "20260413.1700"
 
 PLATFORMS = ["number", "sensor", "binary_sensor", "switch"]
 
@@ -62,6 +62,8 @@ ATTR_FAVORABLE_FROM = "favorable_from"
 ATTR_FAVORABLE_UNTIL = "favorable_until"
 ATTR_THRESHOLD_MIN_PRICE = "threshold_min_price"
 ATTR_THRESHOLD_MAX_PRICE = "threshold_max_price"
+ATTR_CURRENT_THRESHOLD_PRICE = "current_threshold_price"
+ATTR_ALL_FAVORABLE_BLOCKS = "all_favorable_blocks"
 ATTR_MINIMUM_SOC = "minimum_soc"
 ATTR_MAXIMUM_SOC = "maximum_soc"
 ATTR_CURRENT_ENERGY = "current_energy"
@@ -76,6 +78,8 @@ ATTR_CHARGE_POWER = "charge_power"
 ATTR_CHARGE_EFFICIENCY = "charge_efficiency"
 ATTR_CHARGE_EFFICIENCY_CURRENT = "charge_efficiency_current"
 ATTR_CHARGE_EFFICIENCY_SAMPLES = "charge_efficiency_samples"
+ATTR_PLANNED_CHARGE_START = "planned_charge_start"
+ATTR_PLANNED_CHARGE_START_POWER = "planned_charge_start_power"
 ATTR_COMMAND_TARGET_ENTITY = "command_target_entity"
 ATTR_COMMAND_TARGET_UPDATE_ENABLED = "command_target_update_enabled"
 

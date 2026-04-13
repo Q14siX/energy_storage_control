@@ -3,16 +3,14 @@
 [![Version](https://img.shields.io/github/v/release/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Version)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-41BDF5?style=flat)](#)
 [![Stars](https://img.shields.io/github/stars/Q14siX/energy_storage_control?style=flat&logo=github&color=41BDF5&label=Stars)](https://github.com/Q14siX/energy_storage_control/stargazers)
-[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN-41BDF5?style=flat&logo=translate&logoColor=white)](#)
+[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN%20%7C%20DA%20%7C%20NL%20%7C%20NO%20%7C%20SV-41BDF5?style=flat&logo=translate&logoColor=white)](#)
 [![License](https://img.shields.io/github/license/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=License)](https://github.com/Q14siX/energy_storage_control/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/Q14siX/energy_storage_control/total?style=flat&color=41BDF5&label=Downloads)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Issues](https://img.shields.io/github/issues/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Issues)](https://github.com/Q14siX/energy_storage_control/issues)
 
-<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo" width="220"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo"></p>
 
 # Energy Storage Control
-
-[← Zur Sprachübersicht](../README.md)
 
 ## Überblick
 
@@ -22,7 +20,7 @@ Die interne Logik ist bewusst klar getrennt:
 
 - **Preislogik** entscheidet, ob ein Zeitraum günstig ist.
 - **Entladelogik** reagiert auf reale Netzlast.
-- **Ladelogik** plant die verfügbare Restenergie innerhalb der gerade relevanten günstigen Phase.
+- **Ladelogik** verteilt die fehlende Energie über alle verbleibenden günstigen Zeitslots des relevanten Planungstags.
 - **SoC-Logik** schützt Mindest- und Höchstgrenzen.
 - **Hysterese** verhindert Schwingen am oberen SoC-Limit.
 - **Lernlogik** ermittelt den realen Ladewirkungsgrad aus echten Ladevorgängen.
@@ -46,14 +44,13 @@ Diese Integration liefert nicht nur einen einzelnen Steuerwert, sondern eine gan
 - zusätzliche Benutzergrenzen für Lade- und Entladeleistung
 - optionales Schreiben des signierten Sollwerts in eine externe Hilfsentität
 - automatische Speicherung von Cache, Tagesstatistiken und Lernwerten
-- lokale Brand-Assets für Home Assistant sowie zusätzliche Repository-Assets für GitHub/HACS
 
 ## Voraussetzungen
 
 Vor der Einrichtung müssen in Home Assistant bereits folgende Integrationen konfiguriert sein:
 
-- `tibber`
-- `zendure_ha`
+- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 Außerdem erwartet Energy Storage Control passende Quellentitäten:
 
@@ -84,52 +81,6 @@ Ab Werk verwendet die Integration folgende Defaults:
 - Standard-Ladewirkungsgrad für die Planung: **90 %**
 - Benutzergrenze Ausgangsleistung: **0 W** bis zur jeweiligen technischen Maximalgrenze
 - Benutzergrenze Eingangsleistung: **0 W** bis zur jeweiligen technischen Maximalgrenze
-
-## Repository-Struktur
-
-Die ZIP-Datei wurde für GitHub und HACS sinnvoll aufbereitet:
-
-```text
-energy_storage_control/
-├── .github/
-│   └── workflows/
-│       ├── hassfest.yml
-│       └── validate.yml
-├── brand/
-│   ├── icon.png
-│   └── logo.png
-├── custom_components/
-│   └── energy_storage_control/
-│       ├── __init__.py
-│       ├── binary_sensor.py
-│       ├── brand/
-│       │   ├── icon.png
-│       │   └── logo.png
-│       ├── config_flow.py
-│       ├── const.py
-│       ├── coordinator.py
-│       ├── entity.py
-│       ├── manifest.json
-│       ├── number.py
-│       ├── power.py
-│       ├── sensor.py
-│       ├── switch.py
-│       └── translations/
-├── README/
-│   └── README_*.md
-├── .gitignore
-├── GITHUB_PUBLISHING_CHECKLIST.md
-├── hacs.json
-└── README.md
-```
-
-Wichtige Punkte:
-
-- `custom_components/energy_storage_control/` ist die eigentliche Integration.
-- `brand/` im Root dient der Repository-/README-Darstellung.
-- `custom_components/energy_storage_control/brand/` enthält die lokalen Brand-Assets für Home Assistant.
-- `hacs.json` liegt im Root, wie es HACS erwartet.
-- Die GitHub-Workflows für **HACS validation** und **hassfest** sind vorbereitet.
 
 ## Installation
 
@@ -225,7 +176,7 @@ Die Integration erzeugt Home-Assistant-Entitäten mit einem stabilen `esc_`-Prä
   Aktueller Tibber-Preis in `€/kWh`. Attribute enthalten Min/Avg/Max für heute, morgen und gesamt sowie die Rohdaten.
 
 - `sensor.esc_<home>_favorable_phase`  
-  Startzeitpunkt der aktuell relevanten günstigen Phase. Attribute enthalten Start, Ende, Schwellenwerte, Min/Avg/Max innerhalb der Phase und die Phasen-Rohdaten.
+  Startzeitpunkt der aktuell relevanten günstigen Phase. Attribute enthalten Start, Ende, Schwellenwerte sowie Min/Avg/Max des ausgewählten Blocks. Das Attribut `data` enthält alle günstigen 15-Minuten-Slots des ausgewählten Tages, und `all_favorable_blocks` listet alle günstigen Zeitfenster dieses Tages auf.
 
 - `sensor.esc_<primary_home>_state_of_charge`  
   Zusammengeführter aktueller SoC. Attribute enthalten minimalen und maximalen SoC.
@@ -234,7 +185,14 @@ Die Integration erzeugt Home-Assistant-Entitäten mit einem stabilen `esc_`-Prä
   Signierte Netzbilanz in Watt. Attribute enthalten Import, optional Export sowie Min/Max/Avg des aktuellen Tages.
 
 - `sensor.esc_<primary_home>_charge_discharge_power`  
-  Signierter Sollwert. Attribute enthalten `charge_power`, `discharge_power`, gelernte Wirkungsgrade, Sample-Anzahl sowie Informationen zum Command Target.
+  Signierter Sollwert. Attribute enthalten `charge_power`, `discharge_power`, gelernte Wirkungsgrade, Sample-Anzahl, Informationen zum Command Target sowie die unten beschriebenen Planungsattribute.
+
+Zusätzliche Attribute dieses Sensors:
+
+- `planned_charge_start`: Zeitpunkt, ab dem aus der aktuellen Berechnung tatsächlich mit dem Laden begonnen wird.
+- `planned_charge_start_power`: geplante Ladeleistung in Watt zu diesem Startzeitpunkt.
+- Fällt der geplante Start in den aktuell laufenden günstigen Slot, bezieht sich der Zeitstempel auf den aktuellen Moment, weil ESC das Laden nur ab **jetzt** beginnen oder anpassen kann.
+- Wenn die SoC-Hysterese das Laden aktuell blockiert oder derzeit kein Ladebeginn geplant ist, sind diese Werte `null`.
 
 ### Binärsensor
 
@@ -252,6 +210,8 @@ Die Integration erzeugt Home-Assistant-Entitäten mit einem stabilen `esc_`-Prä
 
 Zusätzliche Attribute:
 
+- `number.esc_<home>_favorable_threshold` liefert zusätzlich `current_threshold_price`. Dieser Wert ist der tagesaktuelle Strompreis, bis zu dem ESC Strom als günstig bewertet.
+- Preisattribute werden bewusst nicht auf zwei Nachkommastellen gekürzt, damit sich die Berechnung direkt in Home Assistant nachvollziehen lässt.
 - Batteriekapazität liefert auch aktuelle Energie sowie Energie bei Mindest- und Maximal-SoC.
 - Benutzergrenzen zeigen jeweils den aktuell wirksamen technischen Quellwert an.
 
@@ -265,15 +225,15 @@ Ist der Switch aktiv, wird der berechnete signierte Sollwert in die konfiguriert
 
 ### Preislogik und günstiger Schwellenwert
 
-Die Integration lädt Tibber-Preise für **heute und morgen** über den Home-Assistant-Service `tibber.get_prices`. Anschließend werden die Daten in lokale Zeit umgerechnet und auf vier Nachkommastellen normalisiert.
+Die Integration lädt Tibber-Preise für **heute und morgen** über den Home-Assistant-Service `tibber.get_prices`. Anschließend werden die Daten in lokale Zeit umgerechnet. Preisattribute werden dabei bewusst nicht auf zwei Nachkommastellen reduziert, damit die interne Berechnung direkt nachvollziehbar bleibt.
+
+Das Attribut `current_threshold_price` der Entität `number.esc_<home>_favorable_threshold` zeigt den exakten Strompreis des aktuellen Tages, bis zu dem ESC Strom als günstig bewertet.
 
 Der Grenzpreis für einen günstigen Zeitraum wird pro Tag so berechnet:
 
 ```text
 threshold_price = min_price + ((max_price - min_price) * threshold_percent / 100)
 ```
-
-Dabei wird mathematisch auf **4 Nachkommastellen mit ROUND_HALF_UP** gerundet.
 
 Ein Preis ist günstig, wenn gilt:
 
@@ -290,7 +250,7 @@ Die Integration bildet zusammenhängende günstige Blöcke pro Tag. Für die Aus
 3. erster günstiger Block von morgen
 4. falls morgen noch keine Daten verfügbar sind: letzter günstiger Block von heute
 
-Das ist wichtig, weil die Integration **heute priorisiert** und morgen nur als Fallback verwendet.
+Das ist wichtig, weil die Integration **heute priorisiert** und morgen nur als Fallback verwendet. Der Sensorzustand zeigt weiterhin genau einen ausgewählten günstigen Block, während `data` und `all_favorable_blocks` zusätzlich die vollständige Tagesübersicht aller günstigen Slots bzw. Zeitfenster bereitstellen.
 
 ### Netzleistungsbilanz
 
@@ -320,7 +280,7 @@ Zusätzlich gelten diese Schutzregeln:
 
 ### Ladelogik
 
-Laden findet nur statt, wenn **jetzt** eine günstige Phase aktiv ist.
+Laden findet nur statt, wenn der **aktuelle Slot** im günstigen Preisbereich liegt, also `price <= threshold_price` gilt.
 
 Grundvoraussetzungen:
 
@@ -338,16 +298,29 @@ required_stored_energy_kwh = battery_capacity_kwh * missing_soc_percent / 100
 required_input_energy_kwh = required_stored_energy_kwh / (charge_efficiency_percent / 100)
 ```
 
-Danach betrachtet ESC nur die **verbleibenden Zeitslots** der aktuell relevanten günstigen Phase. Für jeden Slot wird berechnet, wie viel Energie bei der aktuellen Benutzergrenze maximal eingebracht werden könnte.
+Danach erstellt ESC den Ladeplan aus **allen verbleibenden günstigen 15-Minuten-Slots des relevanten Planungstags**. Solange heute noch günstige Slots verfügbar sind, wird heute geplant; nur sonst fällt ESC auf morgen zurück.
 
-Wenn der Energiebedarf größer ist als die insgesamt noch mögliche Energie der Restphase, setzt ESC sofort die volle Benutzer-Ladegrenze.
+Für jeden günstigen Slot wird zunächst ein preisabhängiger Leistungsfaktor berechnet:
 
-Andernfalls verteilt ESC den Energiebedarf auf die verbleibenden Slots nach Preispriorität:
+```text
+price_factor = (threshold_price - slot_price) / (threshold_price - min_price)
+```
 
-- zuerst die günstigsten Slots
+Damit gilt:
+
+- `min_price` → 100 % der verfügbaren Ladeleistung
+- `threshold_price` → 0 % Ladeleistung
+- Preise oberhalb der Schwelle werden für das Laden nicht verwendet
+
+Anschließend verteilt ESC die noch benötigte Eingangsenergie **greedy** über diese günstigen Slots:
+
+- zuerst die billigsten Slots
 - bei gleichem Preis werden spätere Slots bevorzugt
+- der aktuelle Slot erhält nur dann Energie, wenn die billigeren verbleibenden Slots allein nicht ausreichen oder der aktuelle Slot selbst zu den billigsten noch benötigten Slots gehört
 
-Aus der dem aktuellen Slot zugewiesenen Energiemenge ergibt sich dann die Ladeleistung.
+Aus der dem aktuellen Slot zugewiesenen Energiemenge ergibt sich dann die Ladeleistung `charge_power`.
+
+So bleibt das Laden strikt auf den günstigen Bereich begrenzt, während spätere und billigere Slots Vorrang vor früheren, nur noch ausreichend günstigen Slots bekommen.
 
 ### SoC-Hysterese
 
@@ -457,7 +430,8 @@ Prüfen:
 ### Laden bleibt bei 0 W
 Typische Ursachen:
 
-- aktuell keine günstige Phase aktiv
+- der aktuelle Slot liegt nicht im günstigen Preisbereich
+- spätere günstigere Slots decken den Restbedarf bereits ab
 - aktueller SoC bereits am Maximum
 - Hysterese-Hold noch aktiv
 - Benutzergrenze Eingang = 0
@@ -471,12 +445,6 @@ Typische Ursachen:
 - aktueller SoC ist am Minimum
 - Benutzergrenze Ausgang = 0
 - technische Ausgangsgrenze = 0
-
-## GitHub- und HACS-Hinweise
-
-Dieses Paket enthält bereits die wichtigsten dateibasierten Voraussetzungen für ein sauberes GitHub-/HACS-Repository. Dinge wie Repository-Beschreibung, Topics, Sichtbarkeit und Releases müssen direkt in GitHub gesetzt werden.
-
-Dafür liegt zusätzlich die Datei `GITHUB_PUBLISHING_CHECKLIST.md` bei.
 
 ## Support
 

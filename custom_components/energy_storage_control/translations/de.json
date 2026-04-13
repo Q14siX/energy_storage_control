@@ -261,7 +261,7 @@
             "name": "Zeitpunkt Max. Günstigphase Preis"
           },
           "data": {
-            "name": "Rohdaten"
+            "name": "Günstige Zeitslots (Tag)"
           },
           "favorable_from": {
             "name": "Günstig ab"
@@ -271,6 +271,9 @@
           },
           "threshold_max_price": {
             "name": "Schwelle Max. Preis"
+          },
+          "all_favorable_blocks": {
+            "name": "Alle günstigen Zeitfenster"
           }
         }
       },
@@ -329,6 +332,12 @@
           "charge_power": {
             "name": "Ladeleistung"
           },
+          "planned_charge_start": {
+            "name": "Geplanter Ladebeginn"
+          },
+          "planned_charge_start_power": {
+            "name": "Geplante Ladeleistung zu Ladebeginn"
+          },
           "command_target_entity": {
             "name": "Zielentität"
           },
@@ -345,7 +354,12 @@
     },
     "number": {
       "favorable_threshold": {
-        "name": "Günstigkeitsschwelle"
+        "name": "Günstigkeitsschwelle",
+        "state_attributes": {
+          "current_threshold_price": {
+            "name": "Aktueller Schwellenpreis"
+          }
+        }
       },
       "battery_capacity": {
         "name": "Batteriekapazität",

@@ -27,6 +27,8 @@ Detailed documentation is available in the language-specific files below.
 
 Energy Storage Control is a Home Assistant custom integration that combines Tibber price data, grid power measurements, SoC limits, technical charge/discharge limits, and optional external command targets to derive a signed charge/discharge command for a storage system.
 
+The detailed language files document the current charging model, including the charge/discharge power sensor attributes `planned_charge_start` and `planned_charge_start_power`, the `current_threshold_price` attribute of the favorable-threshold entity, and the slot-based favorable charging logic. The favorable-phase sensor now keeps its selected block state while exposing all favorable slots of the selected day in `data` and all favorable day blocks in `all_favorable_blocks`. Price attributes are intentionally exposed without reducing them to two decimal places so the calculation remains traceable.
+
 The repository is prepared for GitHub and HACS custom repository usage:
 
 - `custom_components/energy_storage_control/` contains the actual integration.
@@ -53,8 +55,8 @@ Copy `custom_components/energy_storage_control` into your Home Assistant configu
 
 The integration requires the following Home Assistant integrations to be configured before setup:
 
-- `tibber`
-- `zendure_ha`
+- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 ## Note
 

@@ -3,16 +3,14 @@
 [![Version](https://img.shields.io/github/v/release/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Version)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-41BDF5?style=flat)](#)
 [![Stars](https://img.shields.io/github/stars/Q14siX/energy_storage_control?style=flat&logo=github&color=41BDF5&label=Stars)](https://github.com/Q14siX/energy_storage_control/stargazers)
-[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN-41BDF5?style=flat&logo=translate&logoColor=white)](#)
+[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN%20%7C%20DA%20%7C%20NL%20%7C%20NO%20%7C%20SV-41BDF5?style=flat&logo=translate&logoColor=white)](#)
 [![License](https://img.shields.io/github/license/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=License)](https://github.com/Q14siX/energy_storage_control/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/Q14siX/energy_storage_control/total?style=flat&color=41BDF5&label=Downloads)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Issues](https://img.shields.io/github/issues/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Issues)](https://github.com/Q14siX/energy_storage_control/issues)
 
-<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo" width="220"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo"></p>
 
 # Energy Storage Control
-
-[← Til sprogoverblik](../README.md)
 
 ## Oversigt
 
@@ -39,8 +37,8 @@ Fortegnet er altid:
 
 Følgende integrationer skal allerede være konfigureret i Home Assistant:
 
-- `tibber`
-- `zendure_ha`
+- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 Derudover kræves passende kilder:
 
@@ -58,42 +56,6 @@ Derudover kræves passende kilder:
 - batterikapacitet: **2,44 kWh**
 - SoC-hysterese: **2 %**
 - standard ladevirkningsgrad til planlægning: **90 %**
-
-## Repository-struktur
-
-```text
-energy_storage_control/
-├── .github/
-│   └── workflows/
-│       ├── hassfest.yml
-│       └── validate.yml
-├── brand/
-│   ├── icon.png
-│   └── logo.png
-├── custom_components/
-│   └── energy_storage_control/
-│       ├── __init__.py
-│       ├── binary_sensor.py
-│       ├── brand/
-│       │   ├── icon.png
-│       │   └── logo.png
-│       ├── config_flow.py
-│       ├── const.py
-│       ├── coordinator.py
-│       ├── entity.py
-│       ├── manifest.json
-│       ├── number.py
-│       ├── power.py
-│       ├── sensor.py
-│       ├── switch.py
-│       └── translations/
-├── README/
-│   └── README_*.md
-├── .gitignore
-├── GITHUB_PUBLISHING_CHECKLIST.md
-├── hacs.json
-└── README.md
-```
 
 ## Installation
 
@@ -127,10 +89,17 @@ Flowet består af disse trin:
 ### Sensorer
 
 - `sensor.esc_<home>_current_price` – aktuel Tibber-pris med min/avg/max-attributter for i dag, i morgen og samlet
-- `sensor.esc_<home>_favorable_phase` – starttid for den aktuelt relevante favorable fase
+- `sensor.esc_<home>_favorable_phase` – starttid for den aktuelt relevante favorable fase. `favorable_from` og `favorable_until` beskriver fortsat den valgte blok. Attributten `data` indeholder nu alle favorable 15-minutters-slot for den valgte dag, og `all_favorable_blocks` viser alle favorable tidsvinduer samme dag.
 - `sensor.esc_<primary_home>_state_of_charge` – samlet aktuel SoC med minimum- og maksimum-attributter
 - `sensor.esc_<primary_home>_grid_power_balance` – signeret netbalance i watt
 - `sensor.esc_<primary_home>_charge_discharge_power` – signeret effektkommando med detaljer om charge, discharge og virkningsgrad
+
+Yderligere attributter for denne sensor:
+
+- `planned_charge_start`: tidspunktet, hvor opladning ud fra den aktuelle beregning faktisk forventes at begynde.
+- `planned_charge_start_power`: den planlagte ladeeffekt i watt på dette starttidspunkt.
+- Hvis den planlagte start ligger i det aktuelt aktive favorable slot, henviser tidsstemplet til det aktuelle tidspunkt, fordi ESC kun kan starte eller justere opladning fra **nu**.
+- Hvis SoC-hysterese aktuelt blokerer opladning, eller hvis ingen opladningsstart er planlagt, er disse værdier `null`.
 
 ### Binary sensor
 
@@ -145,6 +114,11 @@ Flowet består af disse trin:
 - `number.esc_<primary_home>_user_output_power_limit`
 - `number.esc_<primary_home>_user_input_power_limit`
 
+Yderligere attributter:
+
+- `number.esc_<home>_favorable_threshold` viser også `current_threshold_price`. Denne værdi er dagens præcise elprisgrænse for, hvornår ESC vurderer strøm som favorabel.
+- Pris-attributter reduceres bevidst ikke til to decimaler, så beregningen kan efterprøves direkte i Home Assistant.
+
 ### Switch
 
 - `switch.esc_<primary_home>_command_target_update`
@@ -153,13 +127,17 @@ Flowet består af disse trin:
 
 ### Prislogik
 
-ESC henter Tibber-priser for **i dag og i morgen** via `tibber.get_prices`. Daglig tærskel beregnes som:
+ESC henter Tibber-priser for **i dag og i morgen** via `tibber.get_prices`. Pris-attributter reduceres bevidst ikke til to decimaler, så beregningen kan efterprøves direkte i Home Assistant.
+
+Attributten `current_threshold_price` på `number.esc_<home>_favorable_threshold` viser den præcise dagspris, op til hvilken ESC vurderer strøm som favorabel.
+
+Daglig tærskel beregnes som:
 
 ```text
 threshold_price = min_price + ((max_price - min_price) * threshold_percent / 100)
 ```
 
-Afrunding sker til fire decimaler med `ROUND_HALF_UP`. En pris er favorabel, når:
+En pris er favorabel, når:
 
 ```text
 price <= threshold_price
@@ -196,7 +174,29 @@ Derudover:
 
 ### Opladning
 
-Opladning sker kun i en aktiv favorabel fase. ESC beregner først manglende energi frem til målets SoC og fordeler derefter behovet på de resterende slots i den aktuelle favorable fase. Billigste slots prioriteres først. Hvis behovet er større end den resterende mulige energi i fasen, bruges fuld bruger-inputgrænse.
+Opladning sker kun, når det **aktuelle slot** ligger i det favorable prisområde, altså når `price <= threshold_price`.
+
+ESC beregner først den manglende energi op til max SoC. Derefter planlægges der over **alle resterende favorable 15-minutters-slots på den relevante planlægningsdag**. Så længe der stadig findes favorable slots i dag, planlægges der mod i dag; ellers bruges i morgen som fallback.
+
+For hvert favorabelt slot beregnes en lineær prisfaktor mellem døgnets minimum og tærsklen:
+
+```text
+price_factor = (threshold_price - slot_price) / (threshold_price - min_price)
+```
+
+Det betyder:
+
+- `min_price` → 100 % af den tilgængelige ladeeffekt
+- `threshold_price` → 0 % ladeeffekt
+- priser over tærsklen bruges ikke til opladning
+
+Derefter fordeler ESC den nødvendige indgangsenergi greedy over de favorable slots:
+
+- billigste slots først
+- ved samme pris foretrækkes senere slots
+- det aktuelle slot får kun energi, hvis de billigere resterende slots ikke alene kan dække behovet, eller hvis det aktuelle slot selv hører til de billigste slots, der stadig er nødvendige
+
+Tildelingen til det aktuelle slot bliver til `charge_power`. Dermed holdes opladning strengt inden for det favorable område, samtidig med at senere og billigere slots får prioritet.
 
 ### Hysterese
 
@@ -233,9 +233,5 @@ Prisrelaterede entiteter oprettes pr. Tibber-hjem. Globale entiteter som netbala
 - Ingen effektkilder: kontrollér numeriske værdier og korrekte effektenheder
 - Ingen SoC-kilder: kontrollér `%`, `device_class: battery` eller område `0..100`
 - Command target opdateres ikke: kontrollér switch, fortegnsområde og at målet ikke samtidig bruges som limit-kilde
-- Opladning forbliver `0`: ingen favorabel fase, SoC er allerede ved maksimum, hysterese-hold eller inputgrænse er `0`
+- Opladning forbliver `0`: aktuelt slot er ikke favorabelt, senere billigere favorable slots dækker allerede behovet, SoC er allerede ved maksimum, hysterese-hold eller inputgrænse er `0`
 - Afladning forbliver `0`: netbalance er ikke høj nok, SoC er ved minimum, eller outputgrænse er `0`
-
-## GitHub og HACS
-
-ZIP-filen indeholder allerede `hacs.json`, brand-assets og workflows til HACS validation og hassfest. GitHub-indstillinger som beskrivelse, topics og releases skal stadig sættes direkte på GitHub.

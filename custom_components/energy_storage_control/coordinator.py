@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from datetime import datetime, timedelta
 import logging
 from statistics import mean
@@ -22,8 +22,12 @@ from .const import (
     ATTR_CHARGE_POWER,
     ATTR_CHARGE_EFFICIENCY_CURRENT,
     ATTR_CHARGE_EFFICIENCY_SAMPLES,
+    ATTR_PLANNED_CHARGE_START,
+    ATTR_PLANNED_CHARGE_START_POWER,
     ATTR_COMMAND_TARGET_ENTITY,
     ATTR_COMMAND_TARGET_UPDATE_ENABLED,
+    ATTR_CURRENT_THRESHOLD_PRICE,
+    ATTR_ALL_FAVORABLE_BLOCKS,
     ATTR_CURRENT_ENERGY,
     ATTR_DATA,
     ATTR_DISCHARGE_POWER,
@@ -808,8 +812,11 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
     def get_charge_discharge_power_attributes(self) -> OrderedDict[str, Any]:
         """Return attributes for the charge/discharge command sensor."""
         attributes: OrderedDict[str, Any] = OrderedDict()
+        home_key = self.home_keys[0] if self.home_keys else None
         attributes[ATTR_CHARGE_POWER] = self.get_charge_power_value()
         attributes[ATTR_DISCHARGE_POWER] = self.get_discharge_power_value()
+        attributes[ATTR_PLANNED_CHARGE_START] = self._isoformat(self.get_planned_charge_start(home_key)) if home_key else None
+        attributes[ATTR_PLANNED_CHARGE_START_POWER] = self.get_planned_charge_start_power_w(home_key) if home_key else None
         attributes[ATTR_CHARGE_EFFICIENCY] = self.get_charge_efficiency_percent()
         attributes[ATTR_CHARGE_EFFICIENCY_CURRENT] = self.get_charge_efficiency_current_percent()
         attributes[ATTR_CHARGE_EFFICIENCY_SAMPLES] = self.get_charge_efficiency_sample_count()
@@ -993,11 +1000,59 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
 
         return False
 
-    def _calculate_current_charge_power_w(self, home_key: str) -> float:
-        """Calculate the current charge power in watts for the active favorable phase."""
-        if not self.is_current_favorable(home_key):
-            return 0.0
+    def _is_charge_hold_active_for_home(self, home_key: str | None) -> bool:
+        """Return whether charging is currently blocked by the active phase hysteresis hold."""
+        if not home_key:
+            return False
 
+        current_phase_id = self.get_current_favorable_phase_id(home_key)
+        hold_phase_id = self._power_command_state.get("charge_hold_phase_id")
+        hold_until_below_hysteresis = bool(
+            self._power_command_state.get("charge_hold_until_below_hysteresis", False)
+        )
+        return bool(current_phase_id and hold_until_below_hysteresis and hold_phase_id == current_phase_id)
+
+    def get_planned_charge_start(self, home_key: str | None) -> datetime | None:
+        """Return when charging is first expected to become active from the current evaluation state."""
+        if not home_key or self._is_charge_hold_active_for_home(home_key):
+            return None
+
+        charge_plan = self._build_charge_plan(home_key)
+        for slot in charge_plan:
+            planned_power_w = float(slot.get("planned_power_w", 0.0) or 0.0)
+            planned_start = slot.get("effective_start")
+            if planned_power_w > 0.0 and isinstance(planned_start, datetime):
+                return planned_start
+        return None
+
+    def get_planned_charge_start_power_w(self, home_key: str | None) -> float | None:
+        """Return the power in watts that is expected at the planned charging start."""
+        if not home_key or self._is_charge_hold_active_for_home(home_key):
+            return None
+
+        charge_plan = self._build_charge_plan(home_key)
+        for slot in charge_plan:
+            planned_power_w = float(slot.get("planned_power_w", 0.0) or 0.0)
+            if planned_power_w > 0.0:
+                return round(planned_power_w, 4)
+        return None
+
+    def _build_charge_plan(self, home_key: str) -> list[dict[str, Any]]:
+        """Build the remaining charge plan across all favorable slots of the selected planning day.
+
+        Charging is only planned for slots whose price is at or below the daily
+        favorable threshold. Each remaining 15-minute slot receives a price-based
+        maximum power between 0 % and 100 % of the configured input limit:
+
+        * at the day's minimum price -> 100 % charge power
+        * at the threshold price     ->   0 % charge power
+        * between both values        -> linear interpolation
+
+        The missing input energy is then allocated greedily to the cheapest favorable
+        slots first. This preserves the linear price-based power ramp inside the
+        favorable price range while ensuring that later and cheaper slots can take
+        priority over earlier but less favorable ones.
+        """
         current_soc = self.get_current_soc()
         max_soc = self.get_max_soc()
         battery_capacity_kwh = self.get_battery_capacity_kwh()
@@ -1011,99 +1066,95 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
             or user_input_limit_w <= 0.0
             or charge_efficiency_percent <= 0.0
         ):
-            return 0.0
+            return []
 
         missing_soc_percent = max(float(max_soc) - float(current_soc), 0.0)
         if missing_soc_percent <= 0.0:
-            return 0.0
+            return []
 
         required_stored_energy_kwh = battery_capacity_kwh * missing_soc_percent / 100.0
         required_input_energy_kwh = required_stored_energy_kwh / (charge_efficiency_percent / 100.0)
         if required_input_energy_kwh <= 0.0:
-            return 0.0
-
-        phase_rows = self.get_favorable_phase_rows(home_key)
-        if not phase_rows:
-            return 0.0
+            return []
 
         parsed = self._parse_rows(self.data.get(home_key, []))
-        now = dt_util.now()
-        remaining_slots: list[dict[str, float | datetime | int]] = []
+        if not parsed:
+            return []
 
-        for start, price in phase_rows:
-            slot_end = None
-            for index, (parsed_start, _) in enumerate(parsed):
-                if parsed_start != start:
-                    continue
-                if (index + 1) < len(parsed):
-                    slot_end = parsed[index + 1][0]
-                else:
-                    slot_end = parsed[index][0] + timedelta(minutes=15)
+        now = dt_util.now()
+        remaining_slots = self._get_remaining_charge_slots(home_key, parsed, now, float(user_input_limit_w))
+        if not remaining_slots:
+            return []
+
+        total_price_limited_energy_kwh = sum(
+            float(slot["price_limited_energy_kwh"]) for slot in remaining_slots
+        )
+        if total_price_limited_energy_kwh <= 0.0:
+            return []
+
+        remaining_input_energy_kwh = min(required_input_energy_kwh, total_price_limited_energy_kwh)
+        if remaining_input_energy_kwh <= 0.0:
+            return []
+
+        allocations_by_start: dict[datetime, tuple[float, float]] = {}
+        prioritized_slots = sorted(
+            remaining_slots,
+            key=lambda slot: (
+                float(slot.get("price", 0.0) or 0.0),
+                slot.get("start") or now,
+            ),
+        )
+
+        for slot in prioritized_slots:
+            if remaining_input_energy_kwh <= 0.0:
                 break
 
-            if slot_end is None or slot_end <= now:
+            duration_hours = float(slot.get("duration_hours", 0.0) or 0.0)
+            max_slot_energy_kwh = float(slot.get("price_limited_energy_kwh", 0.0) or 0.0)
+            max_slot_power_w = float(slot.get("price_limited_power_w", 0.0) or 0.0)
+            slot_start = slot.get("start")
+
+            if not isinstance(slot_start, datetime) or duration_hours <= 0.0 or max_slot_energy_kwh <= 0.0 or max_slot_power_w <= 0.0:
                 continue
 
-            slot_effective_start = max(start, now)
-            duration_hours = max((slot_end - slot_effective_start).total_seconds() / 3600.0, 0.0)
-            if duration_hours <= 0.0:
-                continue
+            allocated_energy_kwh = min(remaining_input_energy_kwh, max_slot_energy_kwh)
+            planned_power_w = min(max_slot_power_w, (allocated_energy_kwh / duration_hours) * 1000.0)
+            allocations_by_start[slot_start] = (
+                round(planned_power_w, 4),
+                round((planned_power_w / 1000.0) * duration_hours, 6),
+            )
+            remaining_input_energy_kwh = max(remaining_input_energy_kwh - allocated_energy_kwh, 0.0)
 
-            remaining_slots.append(
+        charge_plan: list[dict[str, Any]] = []
+        for slot in remaining_slots:
+            slot_start = slot.get("start")
+            planned_power_w, allocated_energy_kwh = allocations_by_start.get(slot_start, (0.0, 0.0))
+            charge_plan.append(
                 {
-                    "start": start,
-                    "end": slot_end,
-                    "price": float(price),
-                    "duration_hours": duration_hours,
-                    "max_energy_kwh": (user_input_limit_w / 1000.0) * duration_hours,
+                    **slot,
+                    "planned_power_w": planned_power_w,
+                    "allocated_energy_kwh": allocated_energy_kwh,
                 }
             )
 
-        if not remaining_slots:
-            return 0.0
+        return charge_plan
 
-        total_possible_energy_kwh = sum(float(slot["max_energy_kwh"]) for slot in remaining_slots)
-        if total_possible_energy_kwh <= 0.0:
-            return 0.0
-
-        current_slot_candidates = [
-            slot
-            for slot in remaining_slots
-            if slot["start"] <= now < slot["end"]
-        ]
-        if current_slot_candidates:
-            current_slot = current_slot_candidates[0]
-        else:
-            current_slot = min(remaining_slots, key=lambda slot: slot["start"])
-
-        if required_input_energy_kwh >= total_possible_energy_kwh:
-            return round(float(user_input_limit_w), 4)
-
-        remaining_energy_kwh = required_input_energy_kwh
-        allocations: dict[datetime, float] = {
-            slot["start"]: 0.0 for slot in remaining_slots
-        }
-
-        sorted_slots = sorted(
-            remaining_slots,
-            key=lambda slot: (float(slot["price"]), -slot["start"].timestamp()),
-        )
-
-        for slot in sorted_slots:
-            if remaining_energy_kwh <= 0.0:
-                break
-            slot_energy = min(float(slot["max_energy_kwh"]), remaining_energy_kwh)
-            allocations[slot["start"]] = slot_energy
-            remaining_energy_kwh -= slot_energy
-
-        current_start = current_slot["start"]
-        current_duration_hours = float(current_slot["duration_hours"])
-        current_allocated_energy_kwh = allocations.get(current_start, 0.0)
-        if current_duration_hours <= 0.0 or current_allocated_energy_kwh <= 0.0:
-            return 0.0
-
-        charge_power_w = (current_allocated_energy_kwh / current_duration_hours) * 1000.0
-        return min(round(charge_power_w, 4), round(float(user_input_limit_w), 4))
+    def _calculate_current_charge_power_w(self, home_key: str) -> float:
+        """Calculate the current charge power in watts for the active current slot."""
+        now = dt_util.now()
+        charge_plan = self._build_charge_plan(home_key)
+        for slot in charge_plan:
+            slot_start = slot.get("start")
+            slot_end = slot.get("end")
+            planned_power_w = float(slot.get("planned_power_w", 0.0) or 0.0)
+            if (
+                isinstance(slot_start, datetime)
+                and isinstance(slot_end, datetime)
+                and slot_start <= now < slot_end
+                and planned_power_w > 0.0
+            ):
+                return round(planned_power_w, 4)
+        return 0.0
 
     def get_active_grid_import_sensor_entity_id(self) -> str | None:
         """Return the currently active import source entity ID."""
@@ -1150,27 +1201,16 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
 
     def is_current_favorable(self, home_key: str) -> bool:
         """Return whether the current slot is favorable within today's threshold."""
-        block = self._get_selected_favorable_block(home_key)
-        if not block:
-            return False
-
-        parsed = self._parse_rows(self.data.get(home_key, []))
-        now = dt_util.now()
-        block_start = block[0][0]
-        block_end = self._get_block_end(block, parsed)
-        if block_end is None:
-            return False
-        return block_start <= now < block_end
+        return self._get_current_favorable_block(home_key) is not None
 
     def get_current_favorable_phase_id(self, home_key: str) -> str | None:
         """Return a stable identifier for the currently active favorable phase."""
-        if not self.is_current_favorable(home_key):
-            return None
-        phase_rows = self.get_favorable_phase_rows(home_key)
+        parsed = self._parse_rows(self.data.get(home_key, []))
+        phase_rows = self._get_current_favorable_block(home_key)
         if not phase_rows:
             return None
         phase_start = phase_rows[0][0]
-        phase_end = self.get_favorable_phase_end(home_key)
+        phase_end = self._get_block_end(phase_rows, parsed)
         if phase_end is None:
             return None
         return f"{home_key}|{self._isoformat(phase_start)}|{self._isoformat(phase_end)}"
@@ -1222,10 +1262,18 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
         return attributes
 
     def get_favorable_phase_attributes(self, home_key: str) -> OrderedDict[str, Any]:
-        """Build the ordered attributes for the selected favorable block."""
+        """Build the ordered attributes for the selected favorable block and all favorable periods of that day."""
+        parsed = self._parse_rows(self.data.get(home_key, []))
         phase_rows = self.get_favorable_phase_rows(home_key)
         end = self.get_favorable_phase_end(home_key)
         phase_thresholds = self._get_threshold_metadata_for_phase(home_key, phase_rows)
+
+        all_blocks: list[list[tuple[datetime, float]]] = []
+        if phase_rows:
+            target_day = phase_rows[0][0].date()
+            all_blocks = self._get_favorable_blocks_for_day(home_key, parsed, target_day)
+
+        all_slots = [slot for block in all_blocks for slot in block]
 
         attributes: OrderedDict[str, Any] = OrderedDict()
         attributes[ATTR_FAVORABLE_FROM] = self._isoformat(phase_rows[0][0]) if phase_rows else None
@@ -1233,9 +1281,13 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
         attributes[ATTR_THRESHOLD_MIN_PRICE] = phase_thresholds.get("min_price")
         attributes[ATTR_THRESHOLD_MAX_PRICE] = phase_thresholds.get("threshold_price")
         self._append_stats(attributes, "favorable_phase", phase_rows)
+        attributes[ATTR_ALL_FAVORABLE_BLOCKS] = [
+            self._serialize_favorable_block(block, parsed)
+            for block in all_blocks
+        ]
         attributes[ATTR_DATA] = [
             {"start_time": self._isoformat(start), "price_per_kwh": price}
-            for start, price in phase_rows
+            for start, price in all_slots
         ]
         return attributes
 
@@ -1329,6 +1381,16 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
         attributes[ATTR_ENERGY_AT_MAXIMUM_SOC] = self._calculate_energy_from_soc(self.get_max_soc())
         return attributes
 
+    def get_favorable_threshold_attributes(self, home_key: str) -> OrderedDict[str, Any]:
+        """Return the current day's exact price threshold for the favorable-threshold entity."""
+        attributes: OrderedDict[str, Any] = OrderedDict()
+        parsed = self._parse_rows(self.data.get(home_key, []))
+        today = dt_util.now().date()
+        today_rows = [(start, price) for start, price in parsed if start.date() == today]
+        _min_price, threshold_price = self._get_day_price_threshold(home_key, today_rows)
+        attributes[ATTR_CURRENT_THRESHOLD_PRICE] = threshold_price
+        return attributes
+
     def _append_stats(
         self,
         attributes: OrderedDict[str, Any],
@@ -1360,7 +1422,7 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
     def _stat_avg(self, rows: list[tuple[datetime, float]]) -> tuple[datetime, float] | None:
         if not rows:
             return None
-        avg_price = round(mean(price for _, price in rows), 4)
+        avg_price = float(mean(price for _, price in rows))
         closest = min(rows, key=lambda item: (abs(item[1] - avg_price), item[0]))
         return (closest[0], avg_price)
 
@@ -1374,7 +1436,7 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
             if dt_value is None:
                 continue
             try:
-                parsed.append((dt_util.as_local(dt_value), round(float(price), 4)))
+                parsed.append((dt_util.as_local(dt_value), float(price)))
             except (TypeError, ValueError):
                 continue
         parsed.sort(key=lambda item: item[0])
@@ -1393,7 +1455,7 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
                 continue
 
             try:
-                price = round(float(raw_price), 4)
+                price = float(raw_price)
             except (TypeError, ValueError):
                 continue
 
@@ -1457,6 +1519,143 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
 
         return []
 
+    def _get_current_favorable_block(self, home_key: str) -> list[tuple[datetime, float]] | None:
+        """Return the favorable block that contains the current time, if any."""
+        parsed = self._parse_rows(self.data.get(home_key, []))
+        if not parsed:
+            return None
+
+        now = dt_util.now()
+        today_blocks = self._get_favorable_blocks_for_day(home_key, parsed, now.date())
+        return self._find_current_block(today_blocks, parsed, now)
+
+    def _get_charge_planning_day(self, home_key: str, parsed: list[tuple[datetime, float]]):
+        """Return the day whose remaining favorable slots should be used for charge planning."""
+        now = dt_util.now()
+        today = now.date()
+        tomorrow = today + timedelta(days=1)
+
+        today_blocks = self._get_favorable_blocks_for_day(home_key, parsed, today)
+        if self._find_current_block(today_blocks, parsed, now) or self._find_next_block(today_blocks, parsed, now):
+            return today
+
+        tomorrow_blocks = self._get_favorable_blocks_for_day(home_key, parsed, tomorrow)
+        if tomorrow_blocks:
+            return tomorrow
+
+        return None
+
+    def _get_slot_end(
+        self,
+        start: datetime,
+        parsed: list[tuple[datetime, float]],
+    ) -> datetime | None:
+        """Return the end datetime of a single price slot."""
+        for index, (candidate_start, _) in enumerate(parsed):
+            if candidate_start != start:
+                continue
+            if (index + 1) < len(parsed):
+                return parsed[index + 1][0]
+            return parsed[index][0] + timedelta(minutes=15)
+        return None
+
+    def _serialize_favorable_block(
+        self,
+        block: list[tuple[datetime, float]],
+        parsed: list[tuple[datetime, float]],
+    ) -> dict[str, Any]:
+        """Return a structured representation of a favorable block."""
+        block_end = self._get_block_end(block, parsed)
+        prices = [price for _, price in block]
+        return {
+            "favorable_from": self._isoformat(block[0][0]) if block else None,
+            "favorable_until": self._isoformat(block_end) if block_end else None,
+            "slot_count": len(block),
+            "min_price": min(prices) if prices else None,
+            "avg_price": mean(prices) if prices else None,
+            "max_price": max(prices) if prices else None,
+            "data": [
+                {"start_time": self._isoformat(start), "price_per_kwh": price}
+                for start, price in block
+            ],
+        }
+
+    def _calculate_price_favorability_factor(
+        self,
+        price: float,
+        min_price: float,
+        threshold_price: float,
+    ) -> float:
+        """Return the linear charge factor between daily minimum and threshold price."""
+        price_decimal = self._price_to_decimal(price)
+        min_decimal = self._price_to_decimal(min_price)
+        threshold_decimal = self._price_to_decimal(threshold_price)
+
+        if price_decimal > threshold_decimal:
+            return 0.0
+
+        span = threshold_decimal - min_decimal
+        if span <= 0:
+            return 1.0
+
+        factor = float((threshold_decimal - price_decimal) / span)
+        return round(max(0.0, min(1.0, factor)), 6)
+
+    def _get_remaining_charge_slots(
+        self,
+        home_key: str,
+        parsed: list[tuple[datetime, float]],
+        now: datetime,
+        user_input_limit_w: float,
+    ) -> list[dict[str, Any]]:
+        """Return all remaining favorable slots of the selected planning day for charge planning."""
+        planning_day = self._get_charge_planning_day(home_key, parsed)
+        if planning_day is None:
+            return []
+
+        day_rows = [(start, price) for start, price in parsed if start.date() == planning_day]
+        if not day_rows:
+            return []
+
+        min_price, threshold_price = self._get_day_price_threshold(home_key, day_rows)
+        if min_price is None or threshold_price is None:
+            return []
+
+        remaining_slots: list[dict[str, Any]] = []
+        for start, price in day_rows:
+            slot_end = self._get_slot_end(start, parsed)
+            if slot_end is None:
+                continue
+            if slot_end <= now:
+                continue
+            if not self._is_price_within_threshold(price, threshold_price):
+                continue
+
+            effective_start = max(start, now)
+            duration_hours = max((slot_end - effective_start).total_seconds() / 3600.0, 0.0)
+            if duration_hours <= 0.0:
+                continue
+
+            price_factor = self._calculate_price_favorability_factor(price, min_price, threshold_price)
+            price_limited_power_w = round(float(user_input_limit_w) * price_factor, 4)
+            price_limited_energy_kwh = round((price_limited_power_w / 1000.0) * duration_hours, 6)
+            remaining_slots.append(
+                {
+                    "start": start,
+                    "effective_start": effective_start,
+                    "end": slot_end,
+                    "price": float(price),
+                    "duration_hours": duration_hours,
+                    "price_factor": price_factor,
+                    "price_limited_power_w": price_limited_power_w,
+                    "price_limited_energy_kwh": price_limited_energy_kwh,
+                    "threshold_min_price": float(min_price),
+                    "threshold_price": float(threshold_price),
+                }
+            )
+
+        return remaining_slots
+
     def _get_favorable_blocks_for_day(
         self,
         home_key: str,
@@ -1504,7 +1703,7 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
         home_key: str,
         day_rows: list[tuple[datetime, float]],
     ) -> tuple[float | None, float | None]:
-        """Return the day's minimum price and maximum favorable price based on min/max span."""
+        """Return the day's minimum price and maximum favorable price based on the raw min/max span."""
         if not day_rows:
             return (None, None)
 
@@ -1513,21 +1712,20 @@ class TibberPreisCoordinator(DataUpdateCoordinator[dict[str, list[dict[str, Any]
         threshold_percent = self.get_threshold_for_home(home_key)
         threshold_percent = max(0.0, min(100.0, float(threshold_percent)))
 
-        min_decimal = self._round_price_half_up(min_price)
-        max_decimal = self._round_price_half_up(max_price)
+        min_decimal = self._price_to_decimal(min_price)
+        max_decimal = self._price_to_decimal(max_price)
         percent_decimal = Decimal(str(threshold_percent))
-        threshold_price = min_decimal + ((max_decimal - min_decimal) * percent_decimal / Decimal("100"))
-        threshold_decimal = threshold_price.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+        threshold_decimal = min_decimal + ((max_decimal - min_decimal) * percent_decimal / Decimal("100"))
         return (float(min_decimal), float(threshold_decimal))
 
     @staticmethod
-    def _round_price_half_up(value: float) -> Decimal:
-        """Round a price mathematically to 4 decimal places."""
-        return Decimal(str(value)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    def _price_to_decimal(value: float) -> Decimal:
+        """Convert a price to Decimal without reducing its precision first."""
+        return Decimal(str(value))
 
     def _is_price_within_threshold(self, price: float, threshold_price: float) -> bool:
-        """Return whether a price is at or below the rounded threshold price."""
-        return self._round_price_half_up(price) <= self._round_price_half_up(threshold_price)
+        """Return whether a price is at or below the exact threshold price."""
+        return self._price_to_decimal(price) <= self._price_to_decimal(threshold_price)
 
     def _get_threshold_metadata_for_phase(
         self,

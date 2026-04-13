@@ -261,7 +261,7 @@
             "name": "Tid för max. pris i gynnsam fas"
           },
           "data": {
-            "name": "Rådata"
+            "name": "Gynnsamma tidsluckor (dag)"
           },
           "favorable_from": {
             "name": "Gynnsam från"
@@ -271,6 +271,9 @@
           },
           "threshold_max_price": {
             "name": "Tröskel maxpris"
+          },
+          "all_favorable_blocks": {
+            "name": "Alla gynnsamma tidsfönster"
           }
         }
       },
@@ -329,6 +332,12 @@
           "charge_power": {
             "name": "Laddeffekt"
           },
+          "planned_charge_start": {
+            "name": "Planerad laddstart"
+          },
+          "planned_charge_start_power": {
+            "name": "Planerad laddningseffekt vid start"
+          },
           "command_target_entity": {
             "name": "Målenhet"
           },
@@ -345,7 +354,12 @@
     },
     "number": {
       "favorable_threshold": {
-        "name": "Gynnsamhetströskel"
+        "name": "Gynnsamhetströskel",
+        "state_attributes": {
+          "current_threshold_price": {
+            "name": "Aktuellt tröskelpris"
+          }
+        }
       },
       "battery_capacity": {
         "name": "Batterikapacitet",

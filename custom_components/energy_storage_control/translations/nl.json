@@ -261,7 +261,7 @@
             "name": "Tijd van max. prijs gunstige fase"
           },
           "data": {
-            "name": "Ruwe gegevens"
+            "name": "Gunstige tijdslots (dag)"
           },
           "favorable_from": {
             "name": "Voordelig vanaf"
@@ -271,6 +271,9 @@
           },
           "threshold_max_price": {
             "name": "Drempel max. prijs"
+          },
+          "all_favorable_blocks": {
+            "name": "Alle gunstige tijdvakken"
           }
         }
       },
@@ -329,6 +332,12 @@
           "charge_power": {
             "name": "Laadvermogen"
           },
+          "planned_charge_start": {
+            "name": "Geplande laadstart"
+          },
+          "planned_charge_start_power": {
+            "name": "Gepland laadvermogen bij start"
+          },
           "command_target_entity": {
             "name": "Doelentiteit"
           },
@@ -345,7 +354,12 @@
     },
     "number": {
       "favorable_threshold": {
-        "name": "Gunstigheidsdrempel"
+        "name": "Gunstigheidsdrempel",
+        "state_attributes": {
+          "current_threshold_price": {
+            "name": "Actuele drempelprijs"
+          }
+        }
       },
       "battery_capacity": {
         "name": "Batterijcapaciteit",

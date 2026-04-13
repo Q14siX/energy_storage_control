@@ -261,7 +261,7 @@
             "name": "Time of max. favourable phase price"
           },
           "data": {
-            "name": "Raw data"
+            "name": "Favourable slots (day)"
           },
           "favorable_from": {
             "name": "Favourable from"
@@ -271,6 +271,9 @@
           },
           "threshold_max_price": {
             "name": "Threshold max. price"
+          },
+          "all_favorable_blocks": {
+            "name": "All favourable blocks"
           }
         }
       },
@@ -329,6 +332,12 @@
           "charge_power": {
             "name": "Charge power"
           },
+          "planned_charge_start": {
+            "name": "Planned charge start"
+          },
+          "planned_charge_start_power": {
+            "name": "Planned charge start power"
+          },
           "command_target_entity": {
             "name": "Command target entity"
           },
@@ -345,7 +354,12 @@
     },
     "number": {
       "favorable_threshold": {
-        "name": "Favorable threshold"
+        "name": "Favorable threshold",
+        "state_attributes": {
+          "current_threshold_price": {
+            "name": "Current threshold price"
+          }
+        }
       },
       "battery_capacity": {
         "name": "Battery capacity",

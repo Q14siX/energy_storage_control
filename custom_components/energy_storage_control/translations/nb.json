@@ -261,7 +261,7 @@
             "name": "Tid for maks. pris i gunstig fase"
           },
           "data": {
-            "name": "Rådata"
+            "name": "Gunstige tidsspor (dag)"
           },
           "favorable_from": {
             "name": "Gunstig fra"
@@ -271,6 +271,9 @@
           },
           "threshold_max_price": {
             "name": "Terskel maks. pris"
+          },
+          "all_favorable_blocks": {
+            "name": "Alle gunstige tidsvinduer"
           }
         }
       },
@@ -329,6 +332,12 @@
           "charge_power": {
             "name": "Ladeeffekt"
           },
+          "planned_charge_start": {
+            "name": "Planlagt ladestart"
+          },
+          "planned_charge_start_power": {
+            "name": "Planlagt ladeeffekt ved start"
+          },
           "command_target_entity": {
             "name": "Målenhet"
           },
@@ -345,7 +354,12 @@
     },
     "number": {
       "favorable_threshold": {
-        "name": "Gunstighetsterskel"
+        "name": "Gunstighetsterskel",
+        "state_attributes": {
+          "current_threshold_price": {
+            "name": "Gjeldende terskelpris"
+          }
+        }
       },
       "battery_capacity": {
         "name": "Batterikapasitet",

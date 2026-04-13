@@ -3,16 +3,14 @@
 [![Version](https://img.shields.io/github/v/release/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Version)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-41BDF5?style=flat)](#)
 [![Stars](https://img.shields.io/github/stars/Q14siX/energy_storage_control?style=flat&logo=github&color=41BDF5&label=Stars)](https://github.com/Q14siX/energy_storage_control/stargazers)
-[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN-41BDF5?style=flat&logo=translate&logoColor=white)](#)
+[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN%20%7C%20DA%20%7C%20NL%20%7C%20NO%20%7C%20SV-41BDF5?style=flat&logo=translate&logoColor=white)](#)
 [![License](https://img.shields.io/github/license/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=License)](https://github.com/Q14siX/energy_storage_control/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/Q14siX/energy_storage_control/total?style=flat&color=41BDF5&label=Downloads)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Issues](https://img.shields.io/github/issues/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Issues)](https://github.com/Q14siX/energy_storage_control/issues)
 
-<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo" width="220"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo"></p>
 
 # Energy Storage Control
-
-[← Tilbake til språkoversikt](../README.md)
 
 ## Oversikt
 
@@ -39,8 +37,8 @@ Fortegn:
 
 Må være konfigurert på forhånd:
 
-- `tibber`
-- `zendure_ha`
+- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 I tillegg trengs passende entiteter for:
 
@@ -58,42 +56,6 @@ I tillegg trengs passende entiteter for:
 - batterikapasitet: **2,44 kWh**
 - SoC-hysterese: **2 %**
 - standard ladevirkningsgrad: **90 %**
-
-## Repository-struktur
-
-```text
-energy_storage_control/
-├── .github/
-│   └── workflows/
-│       ├── hassfest.yml
-│       └── validate.yml
-├── brand/
-│   ├── icon.png
-│   └── logo.png
-├── custom_components/
-│   └── energy_storage_control/
-│       ├── __init__.py
-│       ├── binary_sensor.py
-│       ├── brand/
-│       │   ├── icon.png
-│       │   └── logo.png
-│       ├── config_flow.py
-│       ├── const.py
-│       ├── coordinator.py
-│       ├── entity.py
-│       ├── manifest.json
-│       ├── number.py
-│       ├── power.py
-│       ├── sensor.py
-│       ├── switch.py
-│       └── translations/
-├── README/
-│   └── README_*.md
-├── .gitignore
-├── GITHUB_PUBLISHING_CHECKLIST.md
-├── hacs.json
-└── README.md
-```
 
 ## Installasjon
 
@@ -122,10 +84,18 @@ Viktige regler:
 ### Sensorer
 
 - `sensor.esc_<home>_current_price`
-- `sensor.esc_<home>_favorable_phase`
+- `sensor.esc_<home>_favorable_phase`  
+  Starttid for den valde gunstige blokka. `favorable_from` og `favorable_until` skildrar framleis denne blokka. Attributtet `data` inneheld no alle gunstige 15-minuttsslotar for den valde dagen, og `all_favorable_blocks` viser alle gunstige tidsvindauge same dag.
 - `sensor.esc_<primary_home>_state_of_charge`
 - `sensor.esc_<primary_home>_grid_power_balance`
 - `sensor.esc_<primary_home>_charge_discharge_power`
+
+Ytterlegare attributt for denne sensoren:
+
+- `planned_charge_start`: tidspunktet då lading faktisk er venta å starte ut frå den aktuelle berekninga.
+- `planned_charge_start_power`: planlagd ladeeffekt i watt ved dette starttidspunktet.
+- Dersom planlagd start fell i det gunstige tidsrommet som alt er aktivt, viser tidsstempelet til det noverande tidspunktet, fordi ESC berre kan starte eller justere lading frå **no**.
+- Når SoC-hysterese blokkerer lading, eller når ingen ladestart er planlagd, er desse verdiane `null`.
 
 ### Binærsensor
 
@@ -140,6 +110,11 @@ Viktige regler:
 - `number.esc_<primary_home>_user_output_power_limit`
 - `number.esc_<primary_home>_user_input_power_limit`
 
+Ytterlegare attributt:
+
+- `number.esc_<home>_favorable_threshold` viser òg `current_threshold_price`. Denne verdien er den nøyaktige straumprisgrensa for dagen, altså prisen opp til der ESC vurderer straum som gunstig.
+- Prisattributt blir medvite ikkje reduserte til to desimalar, slik at utrekninga kan etterprøvast direkte i Home Assistant.
+
 ### Switch
 
 - `switch.esc_<primary_home>_command_target_update`
@@ -147,6 +122,10 @@ Viktige regler:
 ## Teknisk logikk
 
 ### Pris og terskel
+
+ESC hentar Tibber-prisar for **i dag og i morgon** og held prisattributta på berekningspresisjon i staden for å kutte dei til to desimalar.
+
+Attributtet `current_threshold_price` på `number.esc_<home>_favorable_threshold` viser den eksakte dagsprisen opp til der ESC vurderer straum som gunstig.
 
 ```text
 threshold_price = min_price + ((max_price - min_price) * threshold_percent / 100)
@@ -183,7 +162,29 @@ Ingen utlading når SoC er ved eller under minimum. Verdien begrenses også av b
 
 ### Lading
 
-Lading skjer bare i aktiv gunstig fase. ESC beregner energibehovet opp til maks SoC og fordeler behovet over de resterende tidsslotsene i fasen, med prioritet til de billigste slottene.
+Lading skjer berre når **gjeldande slot** ligg innanfor det gunstige prisområdet, altså når `price <= threshold_price`.
+
+ESC reknar først ut kor mykje energi som manglar opp til maks SoC. Deretter planlegg ESC over **alle attverande gunstige 15-minuttsslotar på den relevante planleggingsdagen**. Så lenge det finst gunstige slotar i dag, blir i dag brukt; elles fell ESC tilbake på morgondagen.
+
+For kvar gunstig slot reknar ESC først ut ein lineær prisfaktor mellom dagens minimumspris og terskelen:
+
+```text
+price_factor = (threshold_price - slot_price) / (threshold_price - min_price)
+```
+
+Det betyr:
+
+- `min_price` → 100 % av tilgjengeleg ladeeffekt
+- `threshold_price` → 0 % ladeeffekt
+- prisar over terskelen blir ikkje brukte til lading
+
+Deretter fordeler ESC nødvendig inngangsenergi greedy over dei gunstige slotane:
+
+- billigaste slotar først
+- ved lik pris blir seinare slotar prioriterte
+- gjeldande slot får berre energi dersom dei billegare attverande slotane ikkje aleine dekkjer behovet, eller dersom gjeldande slot sjølv er mellom dei billegaste slotane som framleis trengst
+
+Tildelinga til gjeldande slot blir `charge_power`. Dermed held ladinga seg strengt innanfor det gunstige området, samstundes som seinare og billegare slotar blir prioriterte.
 
 ### Hysterese
 
@@ -215,5 +216,5 @@ Prisrelaterte entiteter finnes per Tibber-hjem. Globale entiteter knyttes til de
 - Manglende kilder: sjekk måleenhet og numerisk verdi
 - Ingen SoC-kilder: sjekk `%`, `device_class: battery` eller `0..100`
 - Target oppdateres ikke: sjekk switch, fortegnsområde og konflikt med limit-kilder
-- Lading er `0`: ingen gunstig fase, SoC på maks eller inputgrense `0`
+- Lading er `0`: gjeldende slot er ikke gunstig, seinare billigare gunstige slotar dekkjer alt behovet, SoC på maks eller inputgrense `0`
 - Utlading er `0`: for lav nettbalanse, SoC på minimum eller outputgrense `0`

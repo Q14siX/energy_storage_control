@@ -3,16 +3,14 @@
 [![Version](https://img.shields.io/github/v/release/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Version)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-41BDF5?style=flat)](#)
 [![Stars](https://img.shields.io/github/stars/Q14siX/energy_storage_control?style=flat&logo=github&color=41BDF5&label=Stars)](https://github.com/Q14siX/energy_storage_control/stargazers)
-[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN-41BDF5?style=flat&logo=translate&logoColor=white)](#)
+[![Languages](https://img.shields.io/badge/Languages-DE%20%7C%20EN%20%7C%20DA%20%7C%20NL%20%7C%20NO%20%7C%20SV-41BDF5?style=flat&logo=translate&logoColor=white)](#)
 [![License](https://img.shields.io/github/license/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=License)](https://github.com/Q14siX/energy_storage_control/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/Q14siX/energy_storage_control/total?style=flat&color=41BDF5&label=Downloads)](https://github.com/Q14siX/energy_storage_control/releases/latest)
 [![Issues](https://img.shields.io/github/issues/Q14siX/energy_storage_control?style=flat&color=41BDF5&label=Issues)](https://github.com/Q14siX/energy_storage_control/issues)
 
-<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo" width="220"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo"></p>
 
 # Energy Storage Control
-
-[← Back to language overview](../README.md)
 
 ## Overview
 
@@ -41,8 +39,8 @@ Sign convention:
 
 The following integrations must already be configured:
 
-- `tibber`
-- `zendure_ha`
+- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 You also need suitable entities for:
 
@@ -60,42 +58,6 @@ You also need suitable entities for:
 - battery capacity: **2.44 kWh**
 - SoC hysteresis: **2 %**
 - default planning charge efficiency: **90 %**
-
-## Repository structure
-
-```text
-energy_storage_control/
-├── .github/
-│   └── workflows/
-│       ├── hassfest.yml
-│       └── validate.yml
-├── brand/
-│   ├── icon.png
-│   └── logo.png
-├── custom_components/
-│   └── energy_storage_control/
-│       ├── __init__.py
-│       ├── binary_sensor.py
-│       ├── brand/
-│       │   ├── icon.png
-│       │   └── logo.png
-│       ├── config_flow.py
-│       ├── const.py
-│       ├── coordinator.py
-│       ├── entity.py
-│       ├── manifest.json
-│       ├── number.py
-│       ├── power.py
-│       ├── sensor.py
-│       ├── switch.py
-│       └── translations/
-├── README/
-│   └── README_*.md
-├── .gitignore
-├── GITHUB_PUBLISHING_CHECKLIST.md
-├── hacs.json
-└── README.md
-```
 
 ## Installation
 
@@ -121,9 +83,17 @@ Validation rules include:
 
 - `sensor.esc_<home>_current_price`
 - `sensor.esc_<home>_favourable_phase`
+  Selected favourable block start time. The attributes `favorable_from` and `favorable_until` still describe that selected block. The `data` attribute now contains all favourable 15-minute slots of the selected day, and `all_favorable_blocks` lists every favourable block of that same day.
 - `sensor.esc_<primary_home>_state_of_charge`
 - `sensor.esc_<primary_home>_grid_power_balance`
 - `sensor.esc_<primary_home>_charge_discharge_power`
+
+Additional attributes of this sensor:
+
+- `planned_charge_start`: timestamp when charging is expected to actually begin based on the current evaluation state.
+- `planned_charge_start_power`: planned charging power in watts at that start moment.
+- If the planned start falls inside the currently active favourable slot, the timestamp refers to the current moment, because ESC can only begin or adjust charging from **now** onward.
+- When SoC hysteresis currently blocks charging, or when no charging start is planned, these values are `null`.
 
 ### Binary sensor
 
@@ -138,6 +108,11 @@ Validation rules include:
 - `number.esc_<primary_home>_user_output_power_limit`
 - `number.esc_<primary_home>_user_input_power_limit`
 
+Additional attributes:
+
+- `number.esc_<home>_favourable_threshold` also exposes `current_threshold_price`. This is the current day's exact electricity price threshold up to which ESC considers power favourable.
+- Price attributes are intentionally not reduced to two decimal places so the calculation can be traced directly in Home Assistant.
+
 ### Switch
 
 - `switch.esc_<primary_home>_command_target_update`
@@ -147,6 +122,10 @@ Note: the actual Home Assistant translation keys remain defined by the integrati
 ## Detailed control logic
 
 ### Price logic
+
+ESC requests Tibber prices for **today and tomorrow** and keeps the price attributes at calculation precision instead of reducing them to two decimal places.
+
+The `current_threshold_price` attribute of `number.esc_<home>_favourable_threshold` exposes the exact current-day price up to which ESC classifies electricity as favourable.
 
 ```text
 threshold_price = min_price + ((max_price - min_price) * threshold_percent / 100)
@@ -167,6 +146,8 @@ Priority order:
 3. first favourable block tomorrow
 4. otherwise the most recent favourable block today if tomorrow is unavailable
 
+The sensor state still points to one selected favourable block, while `data` and `all_favorable_blocks` expose the full favourable-day view for traceability.
+
 ### Grid balance
 
 ```text
@@ -185,7 +166,29 @@ No discharge happens when SoC is at or below minimum. The value is also clamped 
 
 ### Charging
 
-Charging only occurs during an active favourable phase. ESC calculates the missing energy up to max SoC and allocates that demand across the remaining slots of the current favourable phase, prioritising the cheapest slots.
+Charging only occurs when the **current slot** is within the favourable price range, meaning `price <= threshold_price`.
+
+ESC first calculates the missing energy up to max SoC. It then plans across **all remaining favourable 15-minute slots of the relevant planning day**. Today is used whenever favourable slots are still available today; tomorrow is only used as a fallback.
+
+For each favourable slot, ESC derives a linear price factor between the daily minimum and the daily threshold:
+
+```text
+price_factor = (threshold_price - slot_price) / (threshold_price - min_price)
+```
+
+That means:
+
+- `min_price` → 100 % of available charging power
+- `threshold_price` → 0 % charging power
+- prices above the threshold are excluded from charging
+
+ESC then allocates the required input energy greedily across the favourable slots:
+
+- cheapest slots first
+- later slots win when prices are equal
+- the current slot only receives energy if the cheaper remaining slots alone cannot satisfy the target, or if the current slot itself belongs to the cheapest slots still required
+
+The allocation for the current slot becomes `charge_power`. This keeps charging inside the favourable range while preserving headroom for later and cheaper slots.
 
 ### Hysteresis
 
@@ -217,5 +220,5 @@ Price-related entities are created per Tibber home. Global entities are tied to 
 - No power sources: verify numeric values and power units
 - No SoC sources: verify `%`, `device_class: battery`, or a `0..100` range
 - Target does not update: check the switch, the signed range, and that the target is not also used as a limit source
-- Charging remains `0`: no favourable phase, SoC already at maximum, hysteresis hold, or input limit `0`
+- Charging remains `0`: current slot not favourable, later cheaper favourable slots already cover demand, SoC already at maximum, hysteresis hold, or input limit `0`
 - Discharging remains `0`: grid balance too low, SoC at minimum, or output limit `0`
