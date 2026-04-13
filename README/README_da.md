@@ -37,7 +37,7 @@ Fortegnet er altid:
 
 Følgende integrationer skal allerede være konfigureret i Home Assistant:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 Derudover kræves passende kilder:

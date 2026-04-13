@@ -55,7 +55,7 @@ Copy `custom_components/energy_storage_control` into your Home Assistant configu
 
 The integration requires the following Home Assistant integrations to be configured before setup:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 ## Note

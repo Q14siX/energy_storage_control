@@ -37,7 +37,7 @@ Tekenconventie:
 
 Vooraf geconfigureerd in Home Assistant:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 Daarnaast zijn geschikte bronentiteiten nodig:

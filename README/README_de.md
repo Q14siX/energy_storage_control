@@ -49,7 +49,7 @@ Diese Integration liefert nicht nur einen einzelnen Steuerwert, sondern eine gan
 
 Vor der Einrichtung müssen in Home Assistant bereits folgende Integrationen konfiguriert sein:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 Außerdem erwartet Energy Storage Control passende Quellentitäten:

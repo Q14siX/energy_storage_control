@@ -49,7 +49,7 @@ This integration provides much more than one single control value:
 
 Before setup, the following Home Assistant integrations must already be configured:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 Energy Storage Control also expects suitable source entities:

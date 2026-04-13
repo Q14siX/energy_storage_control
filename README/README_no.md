@@ -37,7 +37,7 @@ Fortegn:
 
 Må være konfigurert på forhånd:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 I tillegg trengs passende entiteter for:

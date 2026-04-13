@@ -39,7 +39,7 @@ Sign convention:
 
 The following integrations must already be configured:
 
-- [`tibber`](https://www.home-assistant.io/integrations/tibber)
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
 - [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 
 You also need suitable entities for:

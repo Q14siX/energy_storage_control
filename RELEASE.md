@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Q14siX/energy_storage_control/main/brand/logo.png" alt="Energy Storage Control logo" width="220"></p>
 
 # Release Notes – Energy Storage Control
 
@@ -71,9 +71,8 @@ Sign convention:
 ## Runtime expectations
 Before setup, the following Home Assistant integrations must already be available:
 
-- `tibber`
-- `zendure_ha`
-
+- [`Tibber`](https://www.home-assistant.io/integrations/tibber)
+- [Zendure Home Assistant Integration](https://github.com/Zendure/Zendure-HA)
 The setup flow expects suitable source entities for grid import, optional grid export, minimum/maximum/current SoC, technical output/input limits, optional actual battery charge power, and an optional writable signed command target.
 
 ## Version note
